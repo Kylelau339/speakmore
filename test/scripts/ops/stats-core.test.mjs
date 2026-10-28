@@ -145,12 +145,13 @@ test("下载量：按流量折算成完整下载（分段下载拼起来算一�
   const self = new Map([["198.51.100.1", new Set(["ship"])]]);
   const s = summarizeDownloads(rows, { sizes, self });
 
+  // 自测同一天下了两次 dmg，只算一次
   const dmg = s.kinds.find((k) => k.key === "mac-dmg-arm64");
-  assert.deepEqual([dmg.total, dmg.self, dmg.real], [3, 2, 1]);
+  assert.deepEqual([dmg.total, dmg.self, dmg.real], [2, 1, 1]);
   const setup = s.kinds.find((k) => k.key === "win-setup");
   assert.deepEqual([setup.total, setup.self, setup.real], [1.3, 0, 1.3]);
   assert.equal(s.real, 2.3);
-  assert.equal(s.self, 2);
+  assert.equal(s.self, 1);
   assert.deepEqual(s.days, [
     { day: "2026-10-17", mac: 1, win: 0 },
     { day: "2026-10-18", mac: 0, win: 1.3 },
@@ -160,6 +161,46 @@ test("下载量：按流量折算成完整下载（分段下载拼起来算一�
   assert.equal(s.phone, 1);
   assert.deepEqual(s.range, { from: "20261017100000", to: "20261018100100" });
   assert.deepEqual(s.updates, { bytes: 0, self: 0, ips: 0 });
+});
+
+test("同一个 IP 同一种包一天最多算一次：多线程下载器重复拉、同一天换个版本再下都只算一次；换一天、换一种包另算", () => {
+  const size = 1000;
+  const SETUP_092 = "/speakmore/v0.9.2/SpeakMore-Setup-x64.exe";
+  const sizes = new Map([
+    [DMG, size],
+    [SETUP, size],
+    [SETUP_092, size],
+  ]);
+  const A = "203.0.113.50";
+  const rows = rowsOf(
+    // A：下载器分段重复拉，一天传出去 4.8 个包
+    ...Array.from({ length: 8 }, (_, i) => ({ ip: A, t: `2026102811500${i}`, path: SETUP, bytes: 600, status: 206 })),
+    // A 同一天又下了另一个版本的安装程序，还是同一种包
+    { ip: A, t: "20261028120000", path: SETUP_092, bytes: size },
+    // A 同一天下 dmg：换了一种包，另算
+    { ip: A, t: "20261028120100", path: DMG, bytes: size },
+    // A 第二天又下了半个安装程序
+    { ip: A, t: "20261029090000", path: SETUP, bytes: 500 },
+    // B 没到一次，照样按字节折算
+    { ip: "203.0.113.51", t: "20261028130000", path: SETUP, bytes: 400, status: 206 },
+    { ip: "203.0.113.51", t: "20261028130005", path: SETUP, bytes: 400, status: 206 },
+    // 自测的一样封顶
+    { ip: "198.51.100.1", t: "20261028140000", path: DMG, bytes: size },
+    { ip: "198.51.100.1", t: "20261028140100", path: DMG, bytes: size },
+  );
+  const self = new Map([["198.51.100.1", new Set(["ship"])]]);
+  const s = summarizeDownloads(rows, { sizes, self });
+
+  const setup = s.kinds.find((k) => k.key === "win-setup");
+  assert.deepEqual([setup.total, setup.self, setup.real], [2.3, 0, 2.3]);
+  const dmg = s.kinds.find((k) => k.key === "mac-dmg-arm64");
+  assert.deepEqual([dmg.total, dmg.self, dmg.real], [2, 1, 1]);
+  assert.equal(s.real, 3.3);
+  assert.deepEqual(s.days, [
+    { day: "2026-10-28", mac: 1, win: 1.8 },
+    { day: "2026-10-29", mac: 0, win: 0.5 },
+  ]);
+  assert.equal(s.realIps, 2);
 });
 
 test("更新的流量：store/ 下的块按字节加起来（不折算次数），自测的单独记；HEAD、404 不算", () => {

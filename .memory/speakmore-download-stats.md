@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 6b5e9ce5-00ff-48cc-99ba-a927306fc7c3
-  modified: 2026-10-18T11:23:24.694Z
+  modified: 2026-10-28T15:55:06.835Z
 ---
 
 2026-10-18 起，看 SpeakMore 的下载量和流量就跑 `scripts/release/with-cos-key.sh npm run stats`（只读）。脚本在 `scripts/ops/`，怎么认自测、缓存在哪、各项告警的门槛写在 `docs/development.md` 的"下载量与流量"一节。
@@ -19,5 +19,7 @@ metadata:
 - 报数时说清是"按流量折算的完整下载次数、已扣除自测"。IP 数只是接近人数，不等于人数。
 - 加了新的自测方式（比如换了验收脚本），在 `findSelf` 里补特征和测试，不然它的下载会被算成真用户。
 - 访问日志里有真实用户的 IP：只留在 `.stats/`，对话里只用哈希。
+
+- 10-28 起按 IP 封顶：同一个 IP 同一种包一天最多算一次（不分版本，他定的）。起因是多线程下载器分段重复拉，10-28 一个境外 IP 一个 Windows 安装包被算成 17.2 次。改完后同一批日志的真实下载从 723.8 降到 628.6，自测从 66.6 降到 28。10-28 之前报给他的数都是没封顶的，和之后的不能直接比。
 
 扣完自测后，10-14、10-15 两天的真实下载为 0，从 10-16 第一支宣传片发出后才开始有，可以当作认自测认得对不对的佐证。具体数字不记在这里（仓库公开，而且随时能重算）。那次还查出 issue #1 我们的回复里，链接后面紧跟着"（Windows"，有 3 个人点到 404（[[links-no-cjk-punctuation]]）。相关：[[speakmore-release-on-cos]]、[[cloud-changes-user-runs]]
