@@ -281,7 +281,7 @@ function render(r) {
   line();
 
   const d = r.downloads;
-  line("下载（按流量折算成完整下载次数，已扣除自测）");
+  line("下载（按流量折算成完整下载次数，同一个 IP 同一种包一天最多算一次，已扣除自测）");
   line(`  日志范围：${at(d.range.from)} → ${at(d.range.to)}（北京时间）`);
   for (const k of d.kinds) line(`  ${pad(k.label, 26)}真实 ${pad(n(k.real), 7)}自测 ${n(k.self)}`);
   line(`  ${pad("合计", 26)}真实 ${pad(n(d.real), 7)}自测 ${n(d.self)}`);

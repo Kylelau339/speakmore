@@ -1,7 +1,9 @@
 // 下载量和流量观测的计算部分：只吃数据、不碰网络，scripts/ops/stats.mjs 取数后交给这里算。
 //
 // 下载量从 CDN 访问日志算：每个安装包按"传出去的字节 ÷ 包的大小"折算成完整下载次数，
-// 分段下载、下到一半断掉、安全软件预扫都不会把数撑大。
+// 分段下载、下到一半断掉、安全软件预扫都不会把数撑大。同一个 IP 同一种包一天最多算一次：
+// 多线程下载器会分段重复拉（10-28 一个 IP 把 126 MB 的安装程序拉了 2.2 GB），不封顶就被算成十几次。
+// 代价是公司、学校这类共用出口的，同一天同一种包只算一次。
 // 自己的下载（发版核对、验收、自己升级）靠下面几条特征认出来源 IP，整段时间里这个 IP 都算自己的。
 
 import { createHash } from "node:crypto";
@@ -121,12 +123,14 @@ export function knownSizes(before, listed, prefix) {
 
 /**
  * 折算下载量。sizes：Map<路径, 字节数>（路径带开头的 /）；self：findSelf 的结果。
- * 只算 GET 且 2xx 的；每个包按字节折算，自测的单独记。
+ * 只算 GET 且 2xx 的；每个包按字节折算，同一个 IP 同一种包一天最多算一次（不分版本），自测的单独记。
  */
 export function summarizeDownloads(rows, { sizes, self }) {
   const kinds = new Map(KINDS.map((k) => [k.key, { ...k, total: 0, self: 0, real: 0 }]));
   const days = new Map();
   const perIp = new Map();
+  // 每个 IP 每种包每天已经算了多少次，到 1 就不再加
+  const counted = new Map();
   let phone = 0;
   const updates = { bytes: 0, self: 0, ips: new Set() };
   for (const row of rows) {
@@ -143,7 +147,11 @@ export function summarizeDownloads(rows, { sizes, self }) {
     const kind = packageKind(row.path);
     const size = sizes.get(row.path);
     if (!kind || !size || row.method !== "GET" || !isOk(row)) continue;
-    const share = row.bytes / size;
+    const key = `${row.ip} ${kind.key} ${row.day}`;
+    const before = counted.get(key) ?? 0;
+    const share = Math.min(row.bytes / size, 1 - before);
+    if (share <= 0) continue;
+    counted.set(key, before + share);
     const entry = kinds.get(kind.key);
     entry.total += share;
     if (self.has(row.ip)) {
