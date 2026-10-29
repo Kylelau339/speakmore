@@ -1,9 +1,16 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { test } from "node:test";
-import { ENTITLEMENTS, osxSignOptions, signingConfig } from "../../../scripts/build/signing.mjs";
+import {
+  CODESIGN_RETRY_DIR,
+  ENTITLEMENTS,
+  osxSignOptions,
+  signingConfig,
+  useCodesignRetry,
+} from "../../../scripts/build/signing.mjs";
 
 /** 一个临时的仓库根目录，.machine.env 写成 content（null 是没有这个文件） */
 function repo(t, content) {
@@ -56,4 +63,61 @@ test("Chromium 的几个 helper 照签名库的默认给，其余只给 JIT 和�
   }
   const keys = [...readFileSync(ENTITLEMENTS, "utf8").matchAll(/<key>([^<]+)<\/key>/g)].map((match) => match[1]);
   assert.deepEqual(keys, ["com.apple.security.cs.allow-jit", "com.apple.security.device.audio-input"]);
+});
+
+// 签名重试（scripts/build/codesign-retry/codesign）：拿一个假的 codesign 换掉 /usr/bin/codesign 来试
+const shell = { skip: process.platform === "win32" && "签名只在 Mac 上做，套的那一层是 shell 脚本" };
+const TIMESTAMP = "a.app: The timestamp service is not available.";
+
+/** 假的 codesign：前 fails 次在 stderr 写 message、退出码 1，之后在 stdout 写 signed 加参数；calls() 是被调了几次 */
+function fakeCodesign(t, { fails, message }) {
+  const dir = mkdtempSync(join(tmpdir(), "sm-codesign-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const path = join(dir, "codesign");
+  const calls = join(dir, "calls");
+  writeFileSync(
+    path,
+    `#!/bin/sh\nn=$(cat "${calls}" 2>/dev/null || echo 0); n=$((n + 1)); echo $n >"${calls}"\n` +
+      `if [ $n -le ${fails} ]; then echo "${message}" >&2; exit 1; fi\necho "signed $*"\n`,
+  );
+  chmodSync(path, 0o755);
+  return { path, calls: () => Number(readFileSync(calls, "utf8")) };
+}
+
+const signWith = (fake) =>
+  spawnSync(join(CODESIGN_RETRY_DIR, "codesign"), ["--sign", "X", "a.app"], {
+    encoding: "utf8",
+    env: { ...process.env, CODESIGN_RETRY_REAL: fake.path, CODESIGN_RETRY_WAIT: "0" },
+  });
+
+test("签名重试：时间戳服务没连上就重签，签上了照原样交回 codesign 的输出", shell, (t) => {
+  const fake = fakeCodesign(t, { fails: 2, message: TIMESTAMP });
+  const result = signWith(fake);
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout, "signed --sign X a.app\n");
+  assert.equal(fake.calls(), 3);
+  assert.match(result.stderr, /时间戳服务没连上/);
+});
+
+test("签名重试：最多签 5 次，还签不上就交回最后一次的错", shell, (t) => {
+  const fake = fakeCodesign(t, { fails: 99, message: TIMESTAMP });
+  const result = signWith(fake);
+  assert.equal(result.status, 1);
+  assert.equal(fake.calls(), 5);
+  assert.match(result.stderr, /The timestamp service is not available/);
+});
+
+test("签名重试：别的错不重试，照原样交回", shell, (t) => {
+  const fake = fakeCodesign(t, { fails: 99, message: "a.app: No such file or directory" });
+  const result = signWith(fake);
+  assert.equal(result.status, 1);
+  assert.equal(fake.calls(), 1);
+  assert.match(result.stderr, /No such file or directory/);
+});
+
+test("签名重试：接到 PATH 最前面，签名库调的 codesign 就是它；接过一次不再接", () => {
+  const env = { PATH: ["/usr/bin", "/bin"].join(delimiter) };
+  useCodesignRetry(env);
+  useCodesignRetry(env);
+  assert.equal(env.PATH, [CODESIGN_RETRY_DIR, "/usr/bin", "/bin"].join(delimiter));
 });

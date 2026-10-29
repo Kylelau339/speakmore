@@ -1,0 +1,22 @@
+#!/bin/sh
+# 套在 codesign 外面（signing.mjs 的 useCodesignRetry 把这个目录接到 PATH 最前面）。
+# 签 Developer ID 要向 Apple 的时间戳服务要时间戳，打一个 App 要签几百个文件、要几百次；
+# 偶尔一次没连上（The timestamp service is not available），签名库不重试，整个包就失败了（0.17.2 连着两次断在这里）。
+# 碰到这一条就等几秒重签，最多 5 次；别的错照原样交回。重试的提示写在 stderr：签名库只读 stdout
+# CODESIGN_RETRY_REAL、CODESIGN_RETRY_WAIT 只给测试用：换成假的 codesign、不等
+real="${CODESIGN_RETRY_REAL:-/usr/bin/codesign}"
+wait="${CODESIGN_RETRY_WAIT:-5}"
+err="$(mktemp)"
+trap 'rm -f "$err"' EXIT
+i=1
+while :; do
+  "$real" "$@" 2>"$err"
+  code=$?
+  if [ "$code" -eq 0 ] || [ "$i" -ge 5 ] || ! grep -q "timestamp service is not available" "$err"; then
+    cat "$err" >&2
+    exit "$code"
+  fi
+  echo "codesign：时间戳服务没连上（第 $i 次），${wait} 秒后重签" >&2
+  i=$((i + 1))
+  sleep "$wait"
+done

@@ -9,7 +9,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { packager } from "@electron/packager";
-import { osxSignOptions } from "./signing.mjs";
+import { osxSignOptions, useCodesignRetry } from "./signing.mjs";
 import { trimMacLocales } from "./slim.mjs";
 import { APP_ENTRIES, MAC_APP_IGNORE, stageApp } from "./stage-app.mjs";
 
@@ -30,6 +30,8 @@ export async function packageMacApp({ packageDir, arch, out, signing }) {
   // 临时目录建出来是 700，打包时原样成了 Contents/Resources/app 的权限：别的用户打不开 App。改成和别的目录一样的 755
   chmodSync(staging, 0o755);
   let bundleDir;
+  // 签 Developer ID 要向苹果要几百次时间戳，偶尔一次连不上整个包就失败：换成会重签的 codesign
+  if (signing) useCodesignRetry();
   try {
     stageApp(packageDir, staging, APP_ENTRIES, arch);
     [bundleDir] = await packager({

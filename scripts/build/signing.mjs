@@ -3,7 +3,7 @@
 // 环境变量优先，没给的读本机配置 .machine.env（见 .machine.env.example）：证书名里带着人名和团队号，不进仓库。
 
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { parseEnv } from "node:util";
 
 /** 主程序和小帮手的 entitlements：V8 要 JIT，听写要麦克风。签名库默认的那份还开着摄像头、定位、相册这些，用不上 */
@@ -38,4 +38,16 @@ export function osxSignOptions(identity) {
     optionsForFile: (filePath) =>
       /\((Renderer|GPU|Plugin)\)\.app/.test(filePath) ? {} : { entitlements: ENTITLEMENTS },
   };
+}
+
+/** 带重试的 codesign 所在的目录（codesign-retry/codesign：时间戳服务偶尔连不上，签不上就重签） */
+export const CODESIGN_RETRY_DIR = join(import.meta.dirname, "codesign-retry");
+
+/**
+ * 把带重试的 codesign 接到 PATH 最前面。签名库（@electron/osx-sign）按 PATH 找 codesign，又不收 env 参数，
+ * 只能改这个进程的 PATH；之后这个进程里再签的（安装包，dmg.mjs）也走它。接过一次不再接
+ */
+export function useCodesignRetry(env = process.env) {
+  const parts = (env.PATH ?? "").split(delimiter);
+  if (parts[0] !== CODESIGN_RETRY_DIR) env.PATH = [CODESIGN_RETRY_DIR, ...parts].join(delimiter);
 }
