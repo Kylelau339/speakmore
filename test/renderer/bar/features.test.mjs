@@ -23,13 +23,24 @@ test("每个说话的动作：悬浮条上有它的功能、服务端有它的�
   assert.equal(featureOf("constructor"), null);
 });
 
-test("语音输入：开口就发，没有参数、没有胶囊，交付不带别的", () => {
+test("语音输入：开口就发，默认的简体不用发参数、没有胶囊，交付不带别的", () => {
   const dictate = featureOf("dictate");
   const state = dictate.open({ translateTo: ["ja"] });
+  assert.equal(state.outputScript, "simplified");
   assert.equal(dictate.parameters(state), null);
   assert.equal(dictate.chip(state), null);
   assert.equal(dictate.finishing, null);
   assert.deepEqual(dictate.delivered(state, { text: "好", source: null }), {});
+});
+
+test("语音输入：设置里选了繁体，开口时把字形告诉服务端", () => {
+  const dictate = featureOf("dictate");
+  assert.deepEqual(dictate.parameters(dictate.open({ outputScript: "traditional-hk" })), {
+    output_script: "traditional-hk",
+  });
+  assert.deepEqual(dictate.parameters(dictate.open({ outputScript: "traditional-tw" })), {
+    output_script: "traditional-tw",
+  });
 });
 
 test("语音翻译：开口译成设置里的第一种；胶囊里列着设置里的几种，临时换的只管这一次", () => {

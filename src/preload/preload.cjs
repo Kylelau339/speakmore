@@ -107,6 +107,8 @@ contextBridge.exposeInMainWorld("speakmore", {
   removeHotkey: (action, index) => ipcRenderer.invoke("setup:remove-hotkey", action, index),
   resetHotkey: (action) => ipcRenderer.invoke("setup:reset-hotkey", action),
   setBarHint: (value) => ipcRenderer.invoke("setup:set-bar-hint", value),
+  // 听写成品的中文字形：simplified、traditional-hk、traditional-tw
+  setOutputScript: (value) => ipcRenderer.invoke("setup:set-output-script", value),
   // 语音翻译译成哪几种（语言 id 的列表，第一种是默认）
   setTranslateTo: (languages) => ipcRenderer.invoke("setup:set-translate-to", languages),
   setLookupTo: (language) => ipcRenderer.invoke("setup:set-lookup-to", language),

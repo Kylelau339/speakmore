@@ -44,6 +44,8 @@ test("设置逐项列出现在的值、从哪来、能填什么，后面是文�
   assert.match(text, /auto \/ cpu/);
   assert.match(text, /barHint\s+on\s+显示 · 默认/);
   assert.match(text, /on \/ off/);
+  assert.match(text, /outputScript\s+simplified\s+简体 · 默认/);
+  assert.match(text, /simplified \/ traditional-hk \/ traditional-tw/);
   assert.match(text, /theme\s+ink\s+墨 · 默认/);
   assert.match(text, /ink \/ cinnabar \/ indigo/);
   // 示例按系统写（Windows 上没有 fn）

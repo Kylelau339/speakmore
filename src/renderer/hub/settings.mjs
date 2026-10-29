@@ -142,6 +142,12 @@ export function createSettings({ refresh }) {
       [[SYSTEM_LOCALE, t("language.system")], ...LOCALES.map(({ id, name }) => [id, name])],
       setup.language.value,
     );
+    // 听写成品的中文字形：简体，或者繁体（香港、台湾字形）
+    fillSelect(
+      $("output-script"),
+      setup.outputScript.choices.map((id) => [id, t(`outputScripts.${id}`)]),
+      setup.outputScript.value,
+    );
     $("open-at-login").checked = setup.openAtLogin.enabled;
     $("open-at-login-row").hidden = !setup.openAtLogin.supported;
   }
@@ -216,6 +222,19 @@ export function createSettings({ refresh }) {
       showNote("language-note", result.note ?? null);
     } catch (error) {
       showNote("general-problem", t("preferences.languageFailed", { reason: describeError(error) }), "problem");
+    }
+    await refresh();
+  });
+
+  // 换了字形：存下来就行，悬浮条每次开口现读，下一次听写就按新的
+  $("output-script").addEventListener("change", async (event) => {
+    showNote("general-problem", null);
+    showNote("output-script-note", null);
+    try {
+      const result = await window.speakmore.setOutputScript(event.target.value);
+      showNote("output-script-note", result.note ?? null);
+    } catch (error) {
+      showNote("general-problem", t("preferences.outputScriptFailed", { reason: describeError(error) }), "problem");
     }
     await refresh();
   });

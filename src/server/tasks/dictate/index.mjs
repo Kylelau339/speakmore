@@ -1,3 +1,4 @@
+import { Converter } from "opencc-js/cn2t";
 import { textFromModelOutput } from "./output.mjs";
 import { polishInput, polishPromptWith } from "./polish-prompt.mjs";
 import { nativePromptWith, TASK_REMINDER } from "./prompt.mjs";
@@ -29,13 +30,46 @@ const TRANSCRIBE = Object.freeze({
 
 const DICTATION = Object.freeze({ id: "dictate", native: NATIVE, polish: POLISH, transcribe: TRANSCRIBE });
 
+/**
+ * 成品的中文字形（set_mode_config 的 output_script，即设置里的 outputScript），值是 opencc 的地区字形。
+ * 本机模型只会写简体，提示词也要求简体，所以要繁体时在各步收尾之后统一转；英文、数字、粤语用字（嘅、佢、咗）不变
+ */
+const SCRIPTS = Object.freeze({ simplified: null, "traditional-hk": "hk", "traditional-tw": "tw" });
+
+/** 能填的字形，按界面上排的先后 */
+export const OUTPUT_SCRIPTS = Object.freeze(Object.keys(SCRIPTS));
+
+// 一张转换表要建二三十毫秒，第一次用到才建
+const converters = new Map();
+function converterOf(script) {
+  if (!converters.has(script)) converters.set(script, Converter({ from: "cn", to: SCRIPTS[script] }));
+  return converters.get(script);
+}
+
+/** 这一步照原样收尾，再把成品转成要的字形 */
+const converted = (step, convert) =>
+  Object.freeze({ ...step, finish: (...args) => done(convert(step.finish(...args).text)) });
+
 export const dictate = Object.freeze({
   id: "dictate",
   // 协议里的名字照原版（docs/04-voice-pipeline.md 的"模式"）：start_audio 写内部名，set_mode_config 写发给服务端的名字
   mode: "voice_transcript",
   configMode: "transcript",
-  /** 要客户端在 set_mode_config 里给的参数：没有，开口就能定 */
+  /** 要客户端在 set_mode_config 里给的参数：没有，开口就能定。output_script 可以不给（老客户端不发），不给是简体 */
   parameters: Object.freeze([]),
   steps: Object.freeze(["native", "polish", "transcribe"]),
-  bind: () => DICTATION,
+  /** 不认识的字形抛错：服务端报成协议错误，不悄悄按简体做 */
+  bind({ output_script: script = "simplified" } = {}) {
+    if (!Object.hasOwn(SCRIPTS, script)) {
+      throw new Error(`output_script 要是 ${OUTPUT_SCRIPTS.join(" / ")} 之一，现在是 ${JSON.stringify(script)}`);
+    }
+    if (script === "simplified") return DICTATION;
+    const convert = converterOf(script);
+    return Object.freeze({
+      id: "dictate",
+      native: converted(NATIVE, convert),
+      polish: converted(POLISH, convert),
+      transcribe: converted(TRANSCRIBE, convert),
+    });
+  },
 });

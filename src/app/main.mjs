@@ -42,6 +42,7 @@ import { createMove, settleMove } from "../move/index.mjs";
 import { CHAT_VENDORS, formatChatChoice } from "../server/chat/vendors.mjs";
 import { describeRoute, keyVendorOf, MODES, taskProblem } from "../server/modes.mjs";
 import { formatModelChoice, PROVIDERS } from "../server/providers/index.mjs";
+import { OUTPUT_SCRIPTS } from "../server/tasks/dictate/index.mjs";
 import { findTask } from "../server/tasks/index.mjs";
 import { findVendor, VENDORS } from "../server/vendors.mjs";
 import { adoptAppKeys } from "../storage/app-keys.mjs";
@@ -682,6 +683,8 @@ async function main() {
   /** 语音翻译译成哪几种（设置里的 translate.to），第一种是默认。同样每次现读 */
   const currentTranslateTo = () =>
     JSON.parse(resolveSettings({ file: PATHS.settingsFile, env: process.env })["translate.to"].value);
+  /** 听写成品的中文字形（设置里的 outputScript）。每次现读：设置里换了，下一次开口就按新的 */
+  const currentOutputScript = () => resolveSettings({ file: PATHS.settingsFile, env: process.env }).outputScript.value;
   /**
    * 小帮手现在替谁截着 esc 和点击：bar（悬浮条，说话时）、lookup（划词卡片开着时）或 null。同一时间只有一个：
    * 开始说话时卡片收起；正在说话时不理划词。esc、截到的点击按它转给谁
@@ -1095,7 +1098,7 @@ async function main() {
 
   handle("config:get", () => ({ serverUrl, hotkeys: hotkeys.chords, barControls, barHint: currentBarHint() }));
   // 悬浮条每次开口时现读的设置：设置页、命令行、手改文件改了，下一次说话就按新的
-  handle("bar:session-config", () => ({ translateTo: currentTranslateTo() }));
+  handle("bar:session-config", () => ({ translateTo: currentTranslateTo(), outputScript: currentOutputScript() }));
   handle("dictation:deliver", async (_event, payload) => {
     const result = await delivery.completed(payload);
     // 只记长度：成品是用户说的话，不进日志
@@ -1254,6 +1257,8 @@ async function main() {
       barHint: currentBarHint(),
       // 语音翻译译成哪几种（第一种是默认）、能选哪些、最多几种
       translate: { to: currentTranslateTo(), choices: LANGUAGES.map(({ id }) => id), max: MAX_TRANSLATE_TARGETS },
+      // 听写成品的中文字形、能选哪些（简体，繁体香港、台湾字形）
+      outputScript: { value: currentOutputScript(), choices: OUTPUT_SCRIPTS },
       // 划词翻译：译成哪一种、能选哪些，交给哪个模型、自定义服务的地址参数和 key 在哪（货架在 plaza.shelves.lookup）
       lookup: { ...lookupSetup.describe(), choices: LANGUAGES.map(({ id }) => id) },
       language: { value: languageSetting, locale },
@@ -1534,6 +1539,14 @@ async function main() {
     tellBar("bar:hint", barHint);
     setupChanged();
     const variable = overridingEnv("barHint", process.env);
+    return variable === null ? {} : { note: msg("notes.envRemove", { variable }) };
+  });
+  // 设置 › 通用：听写成品的中文字形。悬浮条每次开口现读，下一次说话就按新的
+  handle("setup:set-output-script", (_event, wanted) => {
+    saveSetting(PATHS.settingsFile, "outputScript", wanted);
+    log.info("output_script_changed", { outputScript: currentOutputScript() });
+    setupChanged();
+    const variable = overridingEnv("outputScript", process.env);
     return variable === null ? {} : { note: msg("notes.envRemove", { variable }) };
   });
   // 设置 › 语音翻译：译成哪几种，第一种是默认。悬浮条每次开口现读，下一次说话就按新的

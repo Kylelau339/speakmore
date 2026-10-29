@@ -21,6 +21,7 @@ import {
   formatModelChoice,
   parseModelChoice,
 } from "../server/providers/index.mjs";
+import { OUTPUT_SCRIPTS } from "../server/tasks/dictate/index.mjs";
 import { DEFAULT_THEME, findTheme, THEMES } from "../themes/index.mjs";
 
 // 用户能改的几项设置，存在数据目录的 settings.json 里。
@@ -275,6 +276,18 @@ export const SETTINGS = {
     },
     // 语言的名字用它自己的语言写（English、简体中文），不翻
     label: (value) => (value === SYSTEM_LOCALE ? msg("language.system") : findLocale(value).name),
+  },
+  outputScript: {
+    // 听写成品的中文字形。本机模型只会写简体，要繁体的人在这里选；悬浮条每次开口现读，下一次听写就按新的（server/tasks/dictate）
+    env: "SPEAKMORE_OUTPUT_SCRIPT",
+    default: "simplified",
+    choices: OUTPUT_SCRIPTS,
+    parse(value) {
+      const id = value.trim().toLowerCase();
+      if (!OUTPUT_SCRIPTS.includes(id)) throw oneOf(OUTPUT_SCRIPTS);
+      return id;
+    },
+    label: (value) => msg(`outputScripts.${value}`),
   },
 };
 
