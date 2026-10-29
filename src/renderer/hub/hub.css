@@ -1066,6 +1066,133 @@
   cursor: help;
 }
 
+/* 历史页的工具列：搜索和条数在左，导出在最右 */
+.history-toolbar {
+  justify-content: flex-start;
+}
+
+.history-toolbar .search {
+  flex: 0 1 20rem;
+}
+
+.history-count {
+  margin: 0;
+  font-size: var(--text-small);
+  color: var(--ink-2);
+}
+
+.history-toolbar > .button {
+  margin-left: auto;
+}
+
+/* 正在放的那一条 */
+.play[data-playing] {
+  color: var(--primary);
+}
+
+/* 重跑、导出：照词典对话框的样子（vocabulary.css 的 vocab-dialog） */
+.history-dialog {
+  width: min(30rem, 100vw - 4rem);
+  padding: 0;
+  color: var(--ink);
+  background: var(--glass-strong);
+  backdrop-filter: var(--glass-filter);
+  border: none;
+  border-radius: var(--radius-card);
+  box-shadow:
+    var(--edge),
+    0 30px 80px -24px oklch(0 0 0 / 0.4);
+  -webkit-app-region: no-drag;
+}
+
+.history-dialog[open] {
+  animation: dialog-in var(--dur-slow) var(--ease-out);
+}
+
+.history-dialog::backdrop {
+  background: oklch(0 0 0 / 0.18);
+  backdrop-filter: blur(6px);
+  animation: fade-in var(--dur-slow) var(--ease-out);
+}
+
+.history-dialog-form {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.5rem;
+}
+
+.history-dialog-title {
+  margin: 0;
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+  line-height: 1.35;
+}
+
+.history-dialog-text {
+  margin: 0;
+  font-size: var(--text-small);
+  color: var(--ink-2);
+}
+
+.history-dialog-problem {
+  margin: 0;
+}
+
+.history-dialog-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+/* 重跑：一种模式一格，里面是这一条要选的东西 */
+.history-rerun-modes {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.history-rerun-mode {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.history-rerun-mode[data-supported="false"] {
+  opacity: 0.55;
+}
+
+.history-rerun-mode > label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: var(--weight-medium);
+}
+
+.history-rerun-fields {
+  display: grid;
+  gap: 0.5rem;
+  padding-left: 1.5rem;
+}
+
+.history-rerun-field {
+  display: grid;
+  gap: 0.25rem;
+  font-size: var(--text-small);
+  color: var(--ink-2);
+}
+
+.history-rerun-field .select {
+  width: 100%;
+}
+
+.history-export-formats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 /* ---------- 一路经过的模型（route-view.mjs）：引擎页的推荐组合用 ---------- */
 
 /* 图标加名字，后一个带着前面的箭头一起折行（箭头不会落单在行尾）；不截断 */

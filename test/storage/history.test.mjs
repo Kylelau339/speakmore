@@ -61,6 +61,73 @@ test("存进去的记录能原样读出来，新的在前；目录不存在会�
   history.close();
 });
 
+test("搜索：按成品、原文、失败原因找，不分大小写和位置；% 和 _ 按字面找；可以和功能筛一起用", () => {
+  const history = openHistory(join(dir, "history.db"));
+  history.add(entry({ id: "a1", refinedText: "把 GitHub 的 issue 看完", createdAt: "2026-10-13T08:00:00.000Z" }));
+  history.add(
+    entry({
+      id: "a2",
+      kind: "translate",
+      refinedText: "Let's ship it.",
+      sourceText: "我们发布吧",
+      outputLanguage: "en",
+      createdAt: "2026-10-13T09:00:00.000Z",
+    }),
+  );
+  history.add(
+    entry({
+      id: "a3",
+      status: "failed",
+      refinedText: "",
+      error: "服务端 100% 没有回应",
+      createdAt: "2026-10-13T10:00:00.000Z",
+    }),
+  );
+  history.add(entry({ id: "a4", refinedText: "100_分_的进度", createdAt: "2026-10-13T11:00:00.000Z" }));
+  history.add(entry({ id: "a5", refinedText: "100 分进度", createdAt: "2026-10-13T12:00:00.000Z" }));
+
+  const ids = (options) => history.list(options).map((row) => row.id);
+  assert.deepEqual(ids({ query: "github" }), ["a1"]);
+  assert.deepEqual(ids({ query: "发布" }), ["a2"]);
+  assert.deepEqual(ids({ query: "服务端" }), ["a3"]);
+  // LIKE 的通配符要按字面找
+  assert.deepEqual(ids({ query: "100%" }), ["a3"]);
+  assert.deepEqual(ids({ query: "100_" }), ["a4"]);
+  // 空搜索不过滤
+  assert.deepEqual(ids({ query: "  " }), ["a5", "a4", "a3", "a2", "a1"]);
+  assert.deepEqual(ids({ query: "找不到的字" }), []);
+  // 功能筛：和搜索一起用
+  assert.deepEqual(ids({ kinds: ["translate"] }), ["a2"]);
+  assert.deepEqual(ids({ query: "发布", kinds: ["dictate"] }), []);
+  assert.deepEqual(ids({ query: "发布", kinds: ["translate"] }), ["a2"]);
+  history.close();
+});
+
+test("按 id 取一条：带上它的用量；没有的是 null", () => {
+  const history = openHistory(join(dir, "history.db"));
+  history.add(entry());
+  history.addCall({
+    purpose: "dictation",
+    audioId: "a1",
+    provider: "local",
+    model: "qwen3-asr-0.6b-q8",
+    inputTokens: 0,
+    audioTokens: 0,
+    cachedTokens: 0,
+    outputTokens: 0,
+    thinkingTokens: 0,
+    costUsd: 0,
+    latencyMs: 120,
+    createdAt: "2026-10-13T08:00:01.000Z",
+  });
+  assert.deepEqual(history.get("a1"), {
+    ...entry(),
+    usage: { calls: 1, inputTokens: 0, outputTokens: 0, costUsd: 0, latencyMs: 120 },
+  });
+  assert.equal(history.get("nope"), null);
+  history.close();
+});
+
 test("录音只记文件名：家目录搬了家也对得上；老版本记的完整路径（macOS、Windows 两种写法）读出来也只取文件名", () => {
   const path = join(dir, "history.db");
   const history = openHistory(path);

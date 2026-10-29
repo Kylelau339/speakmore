@@ -192,8 +192,8 @@ export async function startService({
     },
   };
 
-  const build = (nextRoute, apiKey, keys) =>
-    createRefiner({ route: nextRoute, apiKey, keys, transcriber, log, onCall: onModelCall });
+  const build = (nextRoute, apiKey, keys, localFirstHop = transcriber) =>
+    createRefiner({ route: nextRoute, apiKey, keys, transcriber: localFirstHop, log, onCall: onModelCall });
 
   followRoute();
 
@@ -398,6 +398,42 @@ export async function startService({
         if (loadMs !== null) transcriber.dispose();
         busy--;
         restartIdleTimer();
+      }
+    },
+
+    /**
+     * 拿一段存下来的录音、按指定的路线再跑一次（历史里"用另一个模型重跑"）。不改正在走的路线：
+     * 另外建一个 refiner，跑完就丢。本机模型选的和正在走的不是同一个时，照 checkTranscriber 的做法临时装一个，
+     * 跑完卸掉（同一时间两份模型，显卡上多占一份）。记账照记，audioId 用这一次新记录的那个 id
+     * @param {{ route: object, keys?: Record<string, string>, audio: Buffer, task: object, mimeType: string,
+     *   audioId?: string | null, vocabulary?: readonly string[] }} options
+     * @returns {Promise<{ text: string, source: string | null }>}
+     */
+    async refineOnce({ route: tried, keys = {}, audio, task, mimeType, audioId = null, vocabulary = [] }) {
+      let temporary = null;
+      let firstHop = transcriber;
+      // 正在走的就是这个本机模型：用装着的那个（按需装载的会自己装上），不再装第二份
+      const sameLocalModel = usesLocalModel(route) && route.transcriber === tried.transcriber;
+      if (usesLocalModel(tried) && !sameLocalModel) {
+        temporary = await startLocal({ modelId: tried.transcriber, modelsDir, log, acceleration });
+        firstHop = temporary;
+      }
+      let refiner;
+      try {
+        // build 是 async 的（createModeRefiner 装云端转写、润色都要等）
+        refiner = await build(tried, keys[keyVendorOf(tried)?.id], keys, firstHop);
+      } catch (error) {
+        temporary?.dispose();
+        throw error;
+      }
+      busy++;
+      clearTimeout(idleTimer);
+      try {
+        return await refiner.refine(audio, { task, mimeType, audioId, vocabulary });
+      } finally {
+        busy--;
+        restartIdleTimer();
+        temporary?.dispose();
       }
     },
 

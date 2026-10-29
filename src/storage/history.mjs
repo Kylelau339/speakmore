@@ -109,6 +109,17 @@ function migrate(db) {
  */
 const fileNameOf = (stored) => (stored === null ? null : stored.split(/[\\/]/).at(-1));
 
+/**
+ * 搜索的字 → LIKE 的模式：前后加 %，里面的 %、_、\ 按字面找（SQL 里配 ESCAPE '\'）。
+ * 空的、没给的都是 null，不过滤
+ */
+function likePatternOf(query) {
+  if (typeof query !== "string") return null;
+  const text = query.trim();
+  if (text === "") return null;
+  return `%${text.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
+}
+
 /** 只读着看的那一方不能替库升级，版本对不上时列可能不一样，所以不读 */
 function openReadOnly(dbPath) {
   const db = new DatabaseSync(dbPath, { readOnly: true });
@@ -156,10 +167,16 @@ export function openHistory(dbPath, { readOnly = false } = {}) {
              :outputTokens, :thinkingTokens, :costUsd, :latencyMs, :createdAt)`,
   );
   // 先取最近的几条再去对账，账再多也只按 audio_id 的索引查这几条的。
-  // 一条里有一笔不知道价，这一条的钱就是 null：拿一半当全部会少算
+  // 一条里有一笔不知道价，这一条的钱就是 null：拿一半当全部会少算。
+  // query 是搜索的字，按成品、原文、失败原因找；kinds 是只数这几个功能的（都是 NULL 时不过滤）
   const select = db.prepare(
     `WITH recent AS (
-       SELECT * FROM history ORDER BY created_at DESC LIMIT :limit
+       SELECT * FROM history
+       WHERE (:query IS NULL OR refined_text LIKE :query ESCAPE '\\'
+              OR source_text LIKE :query ESCAPE '\\'
+              OR error LIKE :query ESCAPE '\\')
+         AND (:kinds IS NULL OR kind IN (SELECT value FROM json_each(:kinds)))
+       ORDER BY created_at DESC LIMIT :limit
      )
      SELECT recent.id, recent.kind, recent.status, recent.refined_text AS refinedText, recent.source_text AS sourceText,
             recent.output_language AS outputLanguage, recent.error, recent.duration,
@@ -172,6 +189,20 @@ export function openHistory(dbPath, { readOnly = false } = {}) {
      FROM recent LEFT JOIN model_calls AS call ON call.audio_id = recent.id
      GROUP BY recent.id
      ORDER BY recent.created_at DESC`,
+  );
+  // 按 id 取一条（播放录音、重跑都要先拿它的录音文件名）：和上面同一套列，只是不取最近、按 id 找
+  const selectOne = db.prepare(
+    `SELECT history.id, history.kind, history.status, history.refined_text AS refinedText,
+            history.source_text AS sourceText, history.output_language AS outputLanguage, history.error,
+            history.duration, history.audio_local_path AS audioFile, history.created_at AS createdAt,
+            count(call.id) AS calls,
+            sum(call.input_tokens) AS inputTokens,
+            sum(call.output_tokens) AS outputTokens,
+            CASE WHEN count(call.cost_usd) = count(call.id) THEN sum(call.cost_usd) END AS costUsd,
+            sum(call.latency_ms) AS latencyMs
+     FROM history LEFT JOIN model_calls AS call ON call.audio_id = history.id
+     WHERE history.id = :id
+     GROUP BY history.id`,
   );
   // kinds 是 JSON 数组，只数这几个功能的；为空时全数。entries 不管功能，是这段时间里所有记录的条数。
   // 字数按他说的那段数（翻译的是原文），和下面的 dictations() 一个口径：译成英文按字母数，语速会虚高三倍
@@ -233,6 +264,13 @@ export function openHistory(dbPath, { readOnly = false } = {}) {
      GROUP BY audio_id, provider, model ORDER BY ms`,
   );
 
+  /** 一行记录 → 对外的样子：录音只留文件名；用量没记账是 null，有就几项加在一起 */
+  const rowOf = ({ calls, inputTokens, outputTokens, costUsd, latencyMs, ...row }) => ({
+    ...row,
+    audioFile: fileNameOf(row.audioFile),
+    usage: calls === 0 ? null : { calls, inputTokens, outputTokens, costUsd, latencyMs },
+  });
+
   return {
     /**
      * @param {{ id: string, kind?: string, status: "completed" | "failed", refinedText: string, sourceText?: string | null,
@@ -247,13 +285,21 @@ export function openHistory(dbPath, { readOnly = false } = {}) {
      * 最近的记录，新的在前。每一条带上它的用量 usage：{ calls, inputTokens, outputTokens, costUsd, latencyMs }，
      * 夹着时间戳重来过的几次加在一起；没记过账的（没调到模型就失败了，或者记账之前的版本存的）是 null。
      * 录音是 audioFile：录音目录里的文件名
+     * @param {{ limit?: number, query?: string | null, kinds?: readonly string[] | null }} [options]
+     *   query：搜索的字，按成品、原文、失败原因找；kinds：只看这几个功能的。都是 null 时不过滤
      */
-    list({ limit = 200 } = {}) {
-      return select.all({ limit }).map(({ calls, inputTokens, outputTokens, costUsd, latencyMs, ...row }) => ({
-        ...row,
-        audioFile: fileNameOf(row.audioFile),
-        usage: calls === 0 ? null : { calls, inputTokens, outputTokens, costUsd, latencyMs },
-      }));
+    list({ limit = 200, query = null, kinds = null } = {}) {
+      return select
+        .all({ limit, query: likePatternOf(query), kinds: kinds === null ? null : JSON.stringify(kinds) })
+        .map(rowOf);
+    },
+    /**
+     * 按 id 取一条，形同 list() 的一项（带上用量）；没有是 null
+     * @param {string} id
+     */
+    get(id) {
+      const row = selectOne.get({ id });
+      return row === undefined ? null : rowOf(row);
     },
     /**
      * 说了多少次、多少字、多长时间（只数完成的），失败了几次，以及花了多少美元（验证 key 的也算）。

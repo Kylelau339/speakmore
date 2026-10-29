@@ -2,8 +2,9 @@
 export default {
   "common": {
     "sentence": "{text}。",
-    "unknownReason": "原因不明",
-    "close": "關閉"
+    "unknownReason": "不知道什麼原因",
+    "close": "關閉",
+    "cancel": "取消"
   },
   "units": {
     "seconds": "{value} 秒",
@@ -962,14 +963,58 @@ export default {
     "yesterday": "昨天",
     "silent": "音訊無聲",
     "failed": "失敗 · ",
+    "failedLabel": "失敗",
     "copy": "複製",
     "copied": "已複製",
     "copyFailed": "複製失敗",
     "recording": "錄音 {duration}",
+    "original": "原文",
     "model": "模型 {latency} · {cost}",
     "tokens": "輸入 {input} · 輸出 {output} token",
     "tokensCalls": "輸入 {input} · 輸出 {output} token · 呼叫 {calls} 次",
-    "unpriced": "價格不明"
+    "unpriced": "價格不明",
+    "notFound": "找不到這條記錄",
+    "search": "搜尋歷史",
+    "noResults": "沒有找得到的內容",
+    "count": "顯示 {count} 條",
+    "play": "播放錄音",
+    "pause": "暫停",
+    "playFailed": "錄音放不出來：{reason}",
+    "rerun": "用另一個模型重跑",
+    "export": "匯出",
+    "exportTitle": "匯出歷史",
+    "exportScope": "匯出目前篩選的 {count} 條",
+    "exportDone": "已匯出到 {path}",
+    "exportFailed": "匯出失敗：{reason}",
+    "formats": {
+      "markdown": "Markdown",
+      "json": "JSON",
+      "csv": "CSV"
+    }
+  },
+  "rerun": {
+    "title": "用另一個模型重跑",
+    "description": "拿這條錄音再跑一次，結果會新增一條記錄，原來那條留著。",
+    "modes": {
+      "native": "直出",
+      "local": "混合",
+      "private": "離線"
+    },
+    "transcriber": "轉文字",
+    "polish": "整理",
+    "model": "模型",
+    "run": "重跑",
+    "running": "正在重跑…",
+    "failed": "重跑失敗：{reason}",
+    "done": "重跑完成，結果在歷史最上面",
+    "optionsFailed": "讀不出能選的模型：{reason}",
+    "noRecording": "這條記錄沒有錄音，不能重跑",
+    "recordingMissing": "錄音檔案不在錄音目錄裡了，不能重跑",
+    "badTarget": "重跑的模型沒選對，重新選一個",
+    "unsupportedKind": "這種記錄不能重跑",
+    "modelMissing": "本機沒有裝 {model}，先下載再重跑",
+    "needKey": "要先配置 {vendor} 的 key，才能選這個模型",
+    "unsupported": "這種模式做不了這個功能"
   },
   "vocabulary": {
     "title": "詞典",

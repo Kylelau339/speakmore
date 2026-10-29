@@ -86,6 +86,7 @@ All three start from Right ⌥ (Right Alt on Windows): on its own for voice inpu
 - When the text is already in the target language, it is translated into English instead (into Simplified Chinese when the target is English); the card shows the language actually used.
 - Uses its own text model, independent of voice: DeepSeek V4.1 Flash by default, about 0.9 seconds per request; change it in the Selection section of the Engine page, including OpenAI-compatible services.
 - Translations are kept in history and counted in spending, but not in the dictation statistics on the home window.
+- History entries can be searched by text and replayed; the same recording can also be re-run with another mode and model (the result is added as a new entry, the original stays), and exported to Markdown, JSON or CSV.
 
 ## Five freedoms
 
@@ -181,7 +182,7 @@ Open the main window from the menu bar icon. The four pages are on the left, wit
 | --- | --- |
 | Home | The hotkeys of the three features, the active recognition mode, words dictated and speaking rate, a daily heatmap, and the spending trend |
 | Engine | Models, keys and recommended setups for the Voice and Selection sections; see [Model freedom](#-model-freedom) |
-| History | Every record from the three features, filterable by feature; translations show the original, and each entry can be copied |
+| History | Every record from the three features, filterable by feature and searchable by text; copy, replay, or re-run one with another mode and model (added as a new entry), and export to Markdown / JSON / CSV |
 | Dictionary | Names, products and terms that voice input and voice translation spell as written there |
 
 <table>

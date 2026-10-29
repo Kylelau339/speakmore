@@ -52,6 +52,47 @@ const INVALID = () =>
 const GEMINI = { mode: "native", model: { provider: "gemini", model: "gemini-3.5-flash" }, thinkingLevel: "LOW" };
 const OPENAI = { mode: "native", model: { provider: "openai", model: "gpt-audio-mini" }, thinkingLevel: "LOW" };
 
+test("refineOnce：按另给的路线跑一次，不碰正在走的路线；音频、任务、词典、audioId 原样交给它", async (t) => {
+  const received = [];
+  const service = await startService({
+    log: quietLog,
+    route: GEMINI,
+    // build() 是 async 的：这里模拟真正的 createModeRefiner，装着的时候才拿到 refine
+    createRefiner: async ({ apiKey }) => ({
+      warmUp: async () => {},
+      refine: async (audio, options) => {
+        received.push({ apiKey, audio, options });
+        return { text: "另跑的文字", source: null };
+      },
+    }),
+  });
+  t.after(() => service.close());
+
+  const task = { native: { finish: (text) => ({ text, source: null }) } };
+  const route = { mode: "native", model: { provider: "gemini", model: "gemini-3.6-flash" }, thinkingLevel: "LOW" };
+  const audio = Buffer.from([1, 2, 3]);
+  const result = await service.refineOnce({
+    route,
+    keys: { gemini: "key-x" },
+    audio,
+    task,
+    mimeType: "audio/webm",
+    audioId: "new-id",
+    vocabulary: ["Claude Code"],
+  });
+
+  assert.deepEqual(result, { text: "另跑的文字", source: null });
+  assert.equal(received.length, 1);
+  assert.equal(received[0].apiKey, "key-x");
+  assert.deepEqual(received[0].audio, audio);
+  assert.deepEqual(received[0].options, {
+    task,
+    mimeType: "audio/webm",
+    audioId: "new-id",
+    vocabulary: ["Claude Code"],
+  });
+});
+
 test("没有 key 时服务照样在听，听写会失败并说明要去填 key", async (t) => {
   const service = await startService({ log: quietLog, route: GEMINI, createRefiner: () => fakeRefiner("不该用到") });
   t.after(() => service.close());
