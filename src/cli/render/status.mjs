@@ -99,9 +99,9 @@ function hotkeyTitle(status, t) {
   }
 }
 
-/** 界面语言：跟随系统时带上实际用的那种（"System · English"） */
+/** 界面语言：跟随系统时带上实际用的那种（"System · English"）；名字用本界面语言写 */
 function languageTitle({ language, locale }, t) {
-  const name = (id) => findLocale(id)?.name ?? id;
+  const name = (id) => (findLocale(id) === null ? id : t(`language.${id}`));
   return language === SYSTEM_LOCALE ? `${t("language.system")} · ${name(locale)}` : name(language);
 }
 

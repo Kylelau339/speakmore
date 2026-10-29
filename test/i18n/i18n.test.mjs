@@ -19,13 +19,14 @@ import {
 const en = createTranslator("en");
 const zh = createTranslator("zh-CN");
 
-test("默认是英文；登记了英文和简体中文，名字用各自的语言写", () => {
+test("默认是英文；登记了英文、简体中文和繁体中文，名字用各自的语言写", () => {
   assert.equal(DEFAULT_LOCALE, "en");
   assert.deepEqual(
     LOCALES.map(({ id, name }) => [id, name]),
     [
       ["en", "English"],
       ["zh-CN", "简体中文"],
+      ["zh-TW", "繁體中文"],
     ],
   );
 });
@@ -38,15 +39,17 @@ test("按 id 找语言：大小写、_ 和 - 都不论；没有的是 null", () 
 });
 
 test("跟随系统：按偏好顺序找第一个有的，语言和文字都对上才算，都没有就用英文", () => {
-  // 正：简体中文的几种写法都落到 zh-CN；英文不论哪个地区都是 en
+  // 正：简体中文的几种写法都落到 zh-CN；繁体（TW/HK/MO、Hant）都落到 zh-TW；英文不论哪个地区都是 en
   for (const tag of ["zh-Hans-CN", "zh-CN", "zh", "zh-SG", "zh_CN"]) assert.equal(matchLocale([tag]), "zh-CN", tag);
+  for (const tag of ["zh-Hant-TW", "zh-TW", "zh-HK", "zh-Hant-HK", "zh-Hant-MO", "zh-MO", "zh-Hant"])
+    assert.equal(matchLocale([tag]), "zh-TW", tag);
   for (const tag of ["en-US", "en-GB", "en"]) assert.equal(matchLocale([tag]), "en", tag);
   // 顺序：第一个有的赢
   assert.equal(matchLocale(["fr-FR", "zh-Hans-CN", "en-US"]), "zh-CN");
   assert.equal(matchLocale(["en-US", "zh-Hans-CN"]), "en");
-  // 负：繁体不算简体，接着看下一个；都认不出就是英文
-  assert.equal(matchLocale(["zh-TW", "zh-Hans-CN"]), "zh-CN");
-  assert.equal(matchLocale(["zh-Hant-HK"]), "en");
+  assert.equal(matchLocale(["zh-TW", "zh-Hans-CN"]), "zh-TW");
+  assert.equal(matchLocale(["zh-Hans-CN", "zh-Hant-HK"]), "zh-CN");
+  // 负：认不出就是英文
   assert.equal(matchLocale(["ja-JP", "fr"]), "en");
   // 边界：空的、写法不对的
   assert.equal(matchLocale([]), "en");
@@ -68,8 +71,10 @@ test("终端的语言：LC_ALL 盖过 LC_MESSAGES 盖过 LANG；C 和 POSIX 是�
 test("设置里的语言：跟随系统时看系统，写了某种就用它，写了没有的退回英文", () => {
   assert.equal(SYSTEM_LOCALE, "system");
   assert.equal(resolveLocale("system", ["zh-Hans-CN"]), "zh-CN");
+  assert.equal(resolveLocale("system", ["zh-Hant-HK"]), "zh-TW");
   assert.equal(resolveLocale("system", ["ja-JP"]), "en");
   assert.equal(resolveLocale("zh-CN", ["en-US"]), "zh-CN");
+  assert.equal(resolveLocale("zh-TW", ["en-US"]), "zh-TW");
   assert.equal(resolveLocale("en", ["zh-Hans-CN"]), "en");
   assert.equal(resolveLocale("klingon", ["zh-Hans-CN"]), "en");
 });

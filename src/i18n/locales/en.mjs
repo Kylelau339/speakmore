@@ -214,6 +214,10 @@ export default {
 
   language: {
     system: "System",
+    // UI languages, each written the way that language writes itself (so the English UI keeps native names)
+    en: "English",
+    "zh-CN": "简体中文",
+    "zh-TW": "繁體中文",
   },
 
   // Languages translation can target (src/languages.mjs)

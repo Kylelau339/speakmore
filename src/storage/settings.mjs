@@ -274,8 +274,8 @@ export const SETTINGS = {
       if (locale === null) throw oneOf(LANGUAGES);
       return locale.id;
     },
-    // 语言的名字用它自己的语言写（English、简体中文），不翻
-    label: (value) => (value === SYSTEM_LOCALE ? msg("language.system") : findLocale(value).name),
+    // 语言的名字用当前界面语言写（English、简体中文、繁體中文）；繁体界面里不出现简体字
+    label: (value) => msg(`language.${value}`),
   },
   outputScript: {
     // 听写成品的中文字形。本机模型只会写简体，要繁体的人在这里选；悬浮条每次开口现读，下一次听写就按新的（server/tasks/dictate）

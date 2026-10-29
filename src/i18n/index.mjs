@@ -1,5 +1,6 @@
 import en from "./locales/en.mjs";
 import zhCN from "./locales/zh-CN.mjs";
+import zhTW from "./locales/zh-TW.mjs";
 
 // 界面语言：菜单栏、三个窗口、命令行给人看的每一句话都从这里取。内核（提示词、整理出来的成品）不归这里管。
 //
@@ -14,13 +15,15 @@ import zhCN from "./locales/zh-CN.mjs";
 // 在 Windows 上翻译时先找那一节，没有就用通用的；调用的地方不用分系统。说法本来就不分系统的（中文的"本机"）不用写。
 
 /**
- * 按这个顺序列给用户选。name 用它自己的语言写，不翻：认不出眼前语言的人也找得到自己的。
+ * 按这个顺序列给用户选。name 用它自己的语言写，不翻（认不出眼前语言的人也找得到自己的）。
+ * 界面上列出来时用文案里的 language.<id>，按当前的界面语言写（繁体界面里是"簡體中文"，不是"简体中文"）。
  * separator：并列几样时不用 Intl 的写法（A、B和C），一律用它隔开。中文原来的界面就是全用顿号，
  * 而且"和""或"会紧挨着英文字母（Gemini API key和按键监听）
  */
 export const LOCALES = Object.freeze([
   Object.freeze({ id: "en", name: "English", messages: en }),
   Object.freeze({ id: "zh-CN", name: "简体中文", messages: zhCN, separator: "、" }),
+  Object.freeze({ id: "zh-TW", name: "繁體中文", messages: zhTW, separator: "、" }),
 ]);
 
 /** 认不出系统语言、某句没翻时用它 */
@@ -49,7 +52,7 @@ function maximized(tag) {
 
 /**
  * 系统偏好的语言（按优先顺序）里第一个我们有的。语言和文字都对得上才算：简体中文的系统用 zh-CN，
- * 繁体（zh-TW、zh-HK）不算，接着看下一个。都没有就用英文。
+ * 繁体（zh-TW、zh-HK、zh-Hant-*）的地名都归 zh-TW，接着看下一个。都没有就用英文。
  * @param {readonly string[]} preferred 比如 Electron 的 app.getPreferredSystemLanguages()
  */
 export function matchLocale(preferred) {

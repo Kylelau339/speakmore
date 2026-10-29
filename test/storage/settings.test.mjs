@@ -18,6 +18,7 @@ import {
 } from "../../src/storage/settings.mjs";
 
 const zh = createTranslator("zh-CN");
+const zhTW = createTranslator("zh-TW");
 const en = createTranslator("en");
 /** 报错里给人看的那句，按中文翻出来对得上 */
 const said = (pattern) => (error) => pattern.test(zh.text(error.problem ?? error.message));
@@ -249,12 +250,18 @@ test("主题：写 id 或写名字都行，存下来的是 id；没有的那一�
   assert.deepEqual(SETTINGS.theme.choices, ["ink", "cinnabar", "indigo"]);
 });
 
-test("带说明的设置项：热键给出键帽，主题给出主题的名字，按界面语言写；语言的名字用它自己的语言写", () => {
+test("带说明的设置项：热键给出键帽，主题给出主题的名字，按界面语言写；语言的名字也按界面语言写", () => {
   assert.equal(zh.text(SETTINGS["hotkey.dictate"].label('["Fn","MetaRight"]')), WINDOWS ? "fn、右 Win" : "fn、右⌘");
   assert.equal(zh.text(SETTINGS.theme.label("cinnabar")), "朱砂");
   assert.equal(en.text(SETTINGS.theme.label("cinnabar")), "Cinnabar");
+  // 英文界面照旧用各语言自己的写法
   assert.equal(en.text(SETTINGS.language.label("zh-CN")), "简体中文");
+  assert.equal(en.text(SETTINGS.language.label("zh-TW")), "繁體中文");
   assert.equal(zh.text(SETTINGS.language.label("system")), "跟随系统");
+  // 繁体界面里不能出现简体字
+  assert.equal(zhTW.text(SETTINGS.language.label("zh-CN")), "簡體中文");
+  assert.equal(zhTW.text(SETTINGS.language.label("en")), "英文");
+  assert.equal(zhTW.text(SETTINGS.language.label("system")), "跟隨系統");
 });
 
 test("改名前的名字（legacyName）：命令行 config set/unset hotkey 照样认，存的、删的都是新名字；别的入口不认", () => {
@@ -324,8 +331,8 @@ test("界面语言：默认跟随系统；写哪种都认（大小写、_ 不论
     value: "zh-CN",
     source: "env",
   });
-  assert.throws(() => saveSetting(file, "language", "ja"), said(/system \/ en \/ zh-CN/));
-  assert.deepEqual(SETTINGS.language.choices, ["system", "en", "zh-CN"]);
+  assert.throws(() => saveSetting(file, "language", "ja"), said(/system \/ en \/ zh-CN \/ zh-TW/));
+  assert.deepEqual(SETTINGS.language.choices, ["system", "en", "zh-CN", "zh-TW"]);
 });
 
 test("写错时的说法也跟着语言换", () => {
