@@ -247,6 +247,7 @@ export default {
       localModelMemory:
         "本机转文字的模型常驻内存，还是空闲多久后释放：resident 一直装着；1m、5m、10m、30m 空闲这么久后释放，下次开口时再装（隔久了第一句慢一两秒）",
       barHint: "悬浮条上方那行操作提示（再按一下 … 完成 · esc 取消）显示不显示：on 显示，off 不显示",
+      outputScript: "听写出来的中文字用简体还是繁体；英文、数字、粤语用字不动",
       translate: {
         to: "语音翻译译成什么：一种或几种语言（en、ja，逗号隔开），第一种是默认，悬浮条上能临时换成别的几种",
       },
@@ -318,6 +319,11 @@ export default {
   barHints: {
     on: "显示",
     off: "不显示",
+  },
+  outputScripts: {
+    simplified: "简体",
+    "traditional-hk": "繁体（香港）",
+    "traditional-tw": "繁体（台湾）",
   },
   localModels: {
     tags: {
@@ -893,6 +899,7 @@ export default {
     localModelMemory: "内存",
     localModelMemoryFailed: "内存设置未能更换：{reason}",
     barHint: "悬浮条上显示按键提示",
+    outputScript: "输出字形",
     openAtLogin: "开机启动",
     themeFailed: "主题没换成：{reason}",
     languageFailed: "语言没换成：{reason}",
@@ -900,6 +907,7 @@ export default {
     sourceFailed: "下载源未能更换：{reason}",
     accelerationFailed: "加速方式未能更换：{reason}",
     barHintFailed: "操作提示未能更改：{reason}",
+    outputScriptFailed: "输出字形未能更改：{reason}",
     // 设置 › 语音翻译（renderer/hub/translate-pane.mjs）
     translateTo: "译成",
     translateDefault: "默认",

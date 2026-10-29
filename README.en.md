@@ -584,6 +584,7 @@ flowchart LR
 | `acceleration` | `auto` | Acceleration: `auto` / `cpu` |
 | `localModelMemory` | `resident` | On-device transcription model memory: `resident` / `1m` / `5m` / `10m` / `30m` |
 | `barHint` | `on` | Hint line above the voice bar: `on` / `off` |
+| `outputScript` | `simplified` | Script of dictated Chinese: `simplified` / `traditional-hk` / `traditional-tw` |
 | `theme` | `ink` | Theme: `ink` / `cinnabar` / `indigo` |
 | `language` | `system` | Language: `system` / `en` / `zh-CN` |
 
@@ -594,6 +595,7 @@ flowchart LR
 - A `hotkey` setting from 0.13 or earlier is converted on upgrade; the old form, such as `config set hotkey right_command`, still works.
 - Gemini thinking levels: `MINIMAL` / `LOW` / `MEDIUM` / `HIGH`.
 - On a machine short of memory, set `localModelMemory` to release the transcription model after 1, 5, 10, or 30 idle minutes (Settings › On-device models › Memory). The model loads when you start speaking, while you talk; it stays loaded through recording and refinement and is released once idle that long. The default keeps it in memory.
+- Dictated text comes out simplified by default; pick Traditional in Settings › General › Output script (`outputScript`): `traditional-hk` uses Hong Kong forms, `traditional-tw` uses Taiwan forms. English, numbers, and Cantonese-only characters (嘅, 佢, 咗) are the same in both scripts and stay untouched.
 - A self-hosted refinement model is written as `custom/<model>`, e.g. at `http://127.0.0.1:11434/v1`; selection translation works the same way through `lookup.model` and `lookup.customUrl`.
 - Extra parameters a custom service needs go in `customParams` (`lookup.customParams` for selection translation), e.g. `{"reasoning_effort": "minimal"}`. They are sent with both checks and requests; `model`, `messages`, and `stream` cannot be overridden. When capping a reasoning model's output, leave room for its thinking (e.g. `{"max_completion_tokens": 4096}`), or long passages get cut off.
 - A local Ollama or LM Studio can also release its model when idle, set through `customParams`: `{"keep_alive": "5m"}` for Ollama (0.35 or newer), `{"ttl": 300}` (seconds) for LM Studio.

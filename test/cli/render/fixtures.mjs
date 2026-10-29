@@ -58,6 +58,7 @@ export const settings = {
   "lookup.customUrl": { value: "", source: "default" },
   "lookup.customParams": { value: "", source: "default" },
   barHint: { value: "on", source: "default" },
+  outputScript: { value: "simplified", source: "default" },
   theme: { value: "ink", source: "default" },
   language: { value: "system", source: "default" },
 };

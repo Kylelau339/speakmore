@@ -584,6 +584,7 @@ flowchart LR
 | `acceleration` | `auto` | 加速：`auto` / `cpu` |
 | `localModelMemory` | `resident` | 本机转文字模型的内存：`resident` / `1m` / `5m` / `10m` / `30m` |
 | `barHint` | `on` | 悬浮条操作提示：`on` / `off` |
+| `outputScript` | `simplified` | 听写成品的中文字形：`simplified` / `traditional-hk` / `traditional-tw` |
 | `theme` | `ink` | 主题：`ink` / `cinnabar` / `indigo` |
 | `language` | `system` | 语言：`system` / `en` / `zh-CN` |
 
@@ -594,6 +595,7 @@ flowchart LR
 - 0.13 及以前的 `hotkey` 设置在升级时自动换算；`config set hotkey right_command` 等旧写法仍然有效。
 - Gemini 思考档位可选：`MINIMAL` / `LOW` / `MEDIUM` / `HIGH`。
 - 内存紧的电脑可把 `localModelMemory` 设为空闲 1、5、10 或 30 分钟后释放（设置 › 本机模型 › 内存）：开口时装载转文字模型，与说话同时进行；录音和整理期间不释放，空闲到点即归还内存。默认常驻。
+- 听写成品默认简体；要繁体的人在 设置 › 通用 › 输出字形 里选（`outputScript`）：`traditional-hk` 是香港字形，`traditional-tw` 是台湾字形。英文、数字和粤语专有字（嘅、佢、咗）两种写法相同，不受影响。
 - 自建服务的整理模型写作 `custom/<模型>`，地址示例 `http://127.0.0.1:11434/v1`；划词翻译同理，写在 `lookup.model`、`lookup.customUrl`。
 - 自定义服务需要额外参数时写入 `customParams`（划词翻译为 `lookup.customParams`），例如 `{"reasoning_effort": "minimal"}`；检测与请求均附带，`model`、`messages`、`stream` 不可覆盖。推理模型限制输出长度时留足思考的余量（如 `{"max_completion_tokens": 4096}`），否则长段落会被截断。
 - 本机的 Ollama、LM Studio 也能空闲后释放模型，写在 `customParams` 里：Ollama（0.35 起）用 `{"keep_alive": "5m"}`，LM Studio 用 `{"ttl": 300}`（秒）。

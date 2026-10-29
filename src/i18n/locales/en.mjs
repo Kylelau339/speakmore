@@ -258,6 +258,8 @@ export default {
       localModelMemory:
         "Whether the on-device speech-to-text model stays in memory: resident keeps it loaded; 1m, 5m, 10m, or 30m releases it after that much idle time and loads it again when you next speak (the first sentence after a long pause takes a second or two longer)",
       barHint: "Whether the hint line above the voice bar (press … to finish · esc to cancel) shows: on or off",
+      outputScript:
+        "Whether dictated Chinese comes out simplified or traditional: English, numbers, and Cantonese-only characters stay as they are",
       lookup: {
         to: "What selection translation translates into: one language; the card can switch to another for one go",
         model:
@@ -333,6 +335,11 @@ export default {
   barHints: {
     on: "Shown",
     off: "Hidden",
+  },
+  outputScripts: {
+    simplified: "Simplified",
+    "traditional-hk": "Traditional (Hong Kong)",
+    "traditional-tw": "Traditional (Taiwan)",
   },
   localModels: {
     tags: {
@@ -927,6 +934,7 @@ export default {
     localModelMemory: "Memory",
     localModelMemoryFailed: "Memory setting not changed: {reason}",
     barHint: "Show key hints on the voice bar",
+    outputScript: "Output script",
     openAtLogin: "Launch at login",
     themeFailed: "Theme not changed: {reason}",
     languageFailed: "Language not changed: {reason}",
@@ -934,6 +942,7 @@ export default {
     sourceFailed: "Download source not changed: {reason}",
     accelerationFailed: "Acceleration not changed: {reason}",
     barHintFailed: "Hint setting not changed: {reason}",
+    outputScriptFailed: "Output script not changed: {reason}",
     translateTo: "Translate into",
     translateDefault: "Default",
     translateMakeDefault: "Make default",

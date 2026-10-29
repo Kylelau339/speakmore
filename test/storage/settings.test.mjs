@@ -59,6 +59,7 @@ test("没有文件也没有环境变量时全用默认值", () => {
     "lookup.customUrl": { value: "", source: "default" },
     "lookup.customParams": { value: "", source: "default" },
     barHint: { value: "on", source: "default" },
+    outputScript: { value: "simplified", source: "default" },
     theme: { value: "ink", source: "default" },
     language: { value: "system", source: "default" },
   });
@@ -168,6 +169,16 @@ test("悬浮条上方的操作提示能关掉（GitHub issue #3）：on 或 off�
     source: "env",
   });
   assert.throws(() => saveSetting(file, "barHint", "hide"), /on \/ off/);
+});
+
+test("听写的成品字形：简体，或者繁体（香港、台湾字形）；大小写都认，别的不收", () => {
+  saveSetting(file, "outputScript", "Traditional-HK");
+  assert.deepEqual(resolveSettings({ file, env: {} }).outputScript, { value: "traditional-hk", source: "file" });
+  assert.deepEqual(resolveSettings({ file, env: { SPEAKMORE_OUTPUT_SCRIPT: "traditional-tw" } }).outputScript, {
+    value: "traditional-tw",
+    source: "env",
+  });
+  assert.throws(() => saveSetting(file, "outputScript", "zh-Hant"), /simplified \/ traditional-hk \/ traditional-tw/);
 });
 
 test("模型：写成 厂商/模型，只写厂商就用它的默认模型；存下来的都是 厂商/模型", () => {
