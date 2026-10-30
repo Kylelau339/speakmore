@@ -13,6 +13,7 @@
       "!website/dist",
       "!website/src/icons/data.js",
       "!website/src/media.json",
+      "!src/i18n/locales/zh-TW.mjs",
       "package.json",
       "biome.json"
     ]

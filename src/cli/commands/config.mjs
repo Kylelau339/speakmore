@@ -74,9 +74,9 @@ export async function applySettings(io, undo) {
   return 0;
 }
 
-/** 语言写成什么：本界面语言的写法（"跟随系统"、"英文"），认不出的照原样 */
+/** 语言写成什么："跟随系统"，或者那种语言自己的名字 */
 const languageTitle = (t, value) =>
-  value === SYSTEM_LOCALE || findLocale(value) !== null ? t(`language.${value}`) : value;
+  value === SYSTEM_LOCALE ? t("language.system") : (findLocale(value)?.name ?? value);
 
 /** 当场生效的几项：让正在运行的那个重新读一遍设置用哪条命令，它回答里的哪一项，没换成时怎么说 */
 const LIVE = {

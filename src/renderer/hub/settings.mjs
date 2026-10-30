@@ -136,10 +136,10 @@ export function createSettings({ refresh }) {
       setup.theme.choices.map((id) => [id, t(`themes.${id}.name`)]),
       setup.theme.value,
     );
-    // 跟随系统，再列出每种语言；名字用当前界面语言写（繁体界面里不会出现"简体中文"）
+    // 跟随系统，再列出每种语言（名字用它自己的语言写）
     fillSelect(
       $("language"),
-      [[SYSTEM_LOCALE, t("language.system")], ...LOCALES.map(({ id }) => [id, t(`language.${id}`)])],
+      [[SYSTEM_LOCALE, t("language.system")], ...LOCALES.map(({ id, name }) => [id, name])],
       setup.language.value,
     );
     // 听写成品的中文字形：简体，或者繁体（香港、台湾字形）

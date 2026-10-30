@@ -1535,7 +1535,7 @@ test("config set language：环境变量盖着时照实说它用的还是哪种�
   const { speakmore, output } = harness({ daemon: pinned, env: { SPEAKMORE_LANGUAGE: "en" } });
   assert.equal(await speakmore("config", "set", "language", "zh-CN"), 0);
   assert.match(output.out, /环境变量 SPEAKMORE_LANGUAGE 现在设着/);
-  assert.match(output.out, /用的还是英文：.*SPEAKMORE_LANGUAGE/);
+  assert.match(output.out, /用的还是English：.*SPEAKMORE_LANGUAGE/);
 
   const legacy = fakeDaemon({
     running: READY,
@@ -1552,7 +1552,7 @@ test("面板里写着界面语言：跟随系统时带上实际用的那种", as
   const running = { ...READY, language: "system", locale: "en" };
   const { speakmore, output } = harness({ daemon: fakeDaemon({ running }) });
   assert.equal(await speakmore("status"), 0);
-  assert.match(output.out, /语言 +跟随系统 · 英文/);
+  assert.match(output.out, /语言 +跟随系统 · English/);
   const english = harness({
     daemon: fakeDaemon({ running: { ...READY, language: "zh-CN", locale: "zh-CN" } }),
     locale: "en",

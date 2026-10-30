@@ -15,8 +15,8 @@ import zhTW from "./locales/zh-TW.mjs";
 // 在 Windows 上翻译时先找那一节，没有就用通用的；调用的地方不用分系统。说法本来就不分系统的（中文的"本机"）不用写。
 
 /**
- * 按这个顺序列给用户选。name 用它自己的语言写，不翻（认不出眼前语言的人也找得到自己的）。
- * 界面上列出来时用文案里的 language.<id>，按当前的界面语言写（繁体界面里是"簡體中文"，不是"简体中文"）。
+ * 按这个顺序列给用户选。name 用它自己的语言写，不翻：认不出眼前语言的人也找得到自己的。
+ * 繁体的文案（zh-TW）是从简体自动转出来的，不手写：scripts/dev/make-zh-tw.mjs。
  * separator：并列几样时不用 Intl 的写法（A、B和C），一律用它隔开。中文原来的界面就是全用顿号，
  * 而且"和""或"会紧挨着英文字母（Gemini API key和按键监听）
  */
@@ -52,7 +52,7 @@ function maximized(tag) {
 
 /**
  * 系统偏好的语言（按优先顺序）里第一个我们有的。语言和文字都对得上才算：简体中文的系统用 zh-CN，
- * 繁体（zh-TW、zh-HK、zh-Hant-*）的地名都归 zh-TW，接着看下一个。都没有就用英文。
+ * 繁体（台湾、香港、澳门）的系统都用 zh-TW。都没有就用英文。
  * @param {readonly string[]} preferred 比如 Electron 的 app.getPreferredSystemLanguages()
  */
 export function matchLocale(preferred) {
