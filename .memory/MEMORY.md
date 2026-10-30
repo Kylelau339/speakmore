@@ -16,7 +16,7 @@
 - [SpeakMore 按真实产品打磨](typeless-clone-as-real-product.md) — 从用户层面考虑，不用"玩具"当理由省环节
 - [SpeakMore 还在内测](speakmore-only-user-in-beta.md) — 只有他一个人在用；兼容旧版本、迁移按一个人的量来权衡，不做重
 - [SpeakMore 的方向](typeless-clone-open-source-panel.md) — 仿刻定名 SpeakMore，代码在仓库根，已公开（MIT）；一行命令安装并启动，装的和产生的东西全在 ~/.speakmore、能一次删干净；先做 CLI，桌面端以后用 Electron（同 Typeless，不用 Tauri）
-- [SpeakMore 的发布走 COS](speakmore-release-on-cos.md) — 包在 dl.zephyrxiang.com/speakmore/，只从本机发（npm run ship，挂后台），GitHub 不再发；最新 0.18.0（10-30，录音时预览、繁体界面；0.17.2 听写可选繁体；签名时间戳偶尔连不上已加重试；0.17.1 修百炼转写检测；0.17.0 引导重做；0.11.0 起换成 channel.json + store/ 按块更新）；安装包公证会自己重交三次，再断就只补那一步、别重打包；发过的版本不覆盖；证书 2027-01-12 到期要续
+- [SpeakMore 的发布走 COS](speakmore-release-on-cos.md) — 包在 dl.zephyrxiang.com/speakmore/，只从本机发（npm run ship，挂后台），GitHub 不再发；最新 0.18.1（10-30，隐藏窗口不降频；0.18.0 录音时预览、繁体界面；0.17.2 听写可选繁体；签名时间戳偶尔连不上已加重试；0.17.1 修百炼转写检测；0.17.0 引导重做；0.11.0 起换成 channel.json + store/ 按块更新）；安装包公证会自己重交三次，再断就只补那一步、别重打包；发过的版本不覆盖；证书 2027-01-12 到期要续
 - [SpeakMore 官网](speakmore-website.md) — 代码在 website/，图片在单独的桶加 media 子域名（证书 2027-01-13 到期要续），Docker 部署、npm run deploy；README 的图在同一个桶的 readme/ 下；10-23 改成三位一体已上线（标题一行、无说明句、演示不推页面）；发新版后要再部署
 - [issue 等他点名再建](issues-on-user-cue.md) — 不主动提议把待办转成 issue，待办留在 README；别人报的修好发版回复完就直接关
 - [没改东西就别重跑测试](dont-rerun-tests-without-changes.md) — 压缩对话前跑过的不重跑，只在改了代码后跑相关的那一组
@@ -62,5 +62,5 @@
 - [他 Mac 上被占的键](mac-keys-taken.md) — Typeless 占着左 fn、右 ⌘，键盘没有右 Ctrl；开发版热键用右 ⌥（正式版不开时）
 - [PR #14 按需装载](speakmore-pr14-on-demand-model.md) — 外部贡献；自定义服务的空闲释放交给 customParams 的 keep_alive/ttl，本机转写合成一项 localModelMemory；10-22 已合并，跟下个版本发
 - [PR #17 百炼没认出字](speakmore-pr17-bailian-no-words.md) — 外部贡献；qwen-audio、fun-asr 没认出字回 400，10-24 合并并补成当空原文，随 0.17.1 发布
-- [PR #18 到 #20](speakmore-prs-18-20.md) — 同一位贡献者：听写可选繁体（0.17.2 已发）、繁体界面（文案自动生成）、录音时预览（只转写最近 8 秒）；#19、#20 随 0.18.0 发布
+- [PR #18 到 #21](speakmore-prs-18-20.md) — 同一位贡献者：听写可选繁体（0.17.2）、繁体界面（文案自动生成）、录音时预览（只转写最近 8 秒）都已发；#21 隐藏窗口不降频随 0.18.1 发布
 - [翻译功能的形态](speakmore-translation-features.md) — 语音输入、语音翻译、划词翻译；规格在 .playwright-mcp/translate-proto/README.md；随 0.16.0 发布；引导重做随 0.17.0 发布、README 三位一体、#16、官网都在 10-23 做完

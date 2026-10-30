@@ -1,6 +1,6 @@
 ---
 name: speakmore-release-on-cos
-description: SpeakMore 的发布包在腾讯云 COS + CDN（dl.zephyrxiang.com/speakmore/），只从本机用 npm run ship 发，GitHub 上的发布流程已删；最新 0.18.0（10-30）；证书 2027-01-12 到期要续
+description: SpeakMore 的发布包在腾讯云 COS + CDN（dl.zephyrxiang.com/speakmore/），只从本机用 npm run ship 发，GitHub 上的发布流程已删；最新 0.18.1（10-30）；证书 2027-01-12 到期要续
 metadata:
   node_type: memory
   type: project
@@ -36,6 +36,7 @@ SpeakMore 的发布包放在用户自己的腾讯云 COS，前面是 CDN 域名 
 - 0.17.1 在 2026-10-24 发布（百炼的 qwen-audio、fun-asr 转写没认出字当成空原文，PR #17；7168 个对象加 15 个文件），先只推标签，ship 由他在会话里挂后台。第一次断在应用本身那次公证：notarytool 报 appstoreconnect.apple.com 的证书无效（NSURLErrorDomain -1202），什么都还没传；本机连苹果走代理（域名解析到 198.18.x 的假地址），事后查证书是苹果签的、notarytool history 连三次都通，判定为代理临时出错，整个重跑 ship 一次跑通。传完合进 main、部署官网（线上提交 601b660，页面脚本里的版本号是 0.17.1）。验收照 0.13.1 那两份脚本（只改版本号；之后挪进了 scripts/release/accept-mac.sh、accept-win.sh）：Mac 线上 dmg 校验值对、公证有效、隔离家目录真启动零报错，终端安装加 update 正常；Windows 开发机经 SSH 在隔离用户目录装 0.17.0 开着、irm 升到 0.17.1、update 已是最新、真启动零报错，Path 还原。开发机禁止直接运行 .ps1，要 `powershell -NoProfile -ExecutionPolicy Bypass -File`。
 - 0.17.2 在 2026-10-29 发布（听写成品可选简体或繁体，PR #18）。前两次 ship 都断在 Intel 版应用签名：codesign 报 The timestamp service is not available，两次断在不同文件，单独签 15 次都通，判定为几百次时间戳请求里偶尔一次没连上、签名库不重试；什么都没传。第三次在临时目录给 codesign 套了一层重试（PATH 最前面）跑通，没记到重试。之后把重试写进仓库（scripts/build/codesign-retry/codesign，packageMacApp 签名时接到 PATH 最前面）。官网线上提交 654d276、脚本里版本 0.17.2。只验了 Mac（accept-mac.sh 全过）；Windows 没验，他那时在用那台机器，说不用管。
 - 0.18.0 在 2026-10-30 发布（录音时预览文字 PR #19、繁体中文界面 PR #20）：推标签时 GitHub 连接断了两次，重试推上；ship 一次跑通（7169 个对象），仓库里的签名重试这次没触发。官网线上提交 d91a44e、脚本里版本 0.18.0。只验了 Mac（accept-mac.sh 全过），Windows 他说不验。
+- 0.18.1 在 2026-10-30 发布（隐藏的悬浮条和划词卡片不降频，PR #21）：ship 一次跑通，签名重试没触发；官网线上提交 b8d5c61、脚本里版本 0.18.1。只验了 Mac（accept-mac.sh 全过）。
 - ship 开头报"标签 vX 还没推到 GitHub"时先看日志上一行：是 `SSL_ERROR_SYSCALL` 之类的网络错误，就用 `git ls-remote origin refs/tags/vX^{}` 确认标签指着 HEAD，直接重跑，不用动标签。
 - 从 ssh 远程跑 Windows 的 `speakmore update`：旧版本目录要等旧进程退出后由后台删，那个后台进程随 ssh 会话一起没了，旧目录会留着（桌面上点更新不会）。确认 current 已指向新版本、没有进程在用旧目录，再手动删。
 - 发版前本机自测打的包在 dist/release，ship 的打包第一步会整个清掉，不会被传上去。
