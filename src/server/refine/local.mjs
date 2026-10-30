@@ -24,6 +24,12 @@ import { ModelError } from "../providers/errors.mjs";
  * @param {(record: object) => void} [options.onCall] 记账，样子同 meter.mjs 的 onCall
  * @param {typeof toSpeech} [options.decode] 测试时换成假的
  */
+/**
+ * 录音时的预览只转写最近这么多秒。每次都从头转的话越说越慢（Mac 上只用 CPU，136 秒的话一次要近 10 秒，
+ * 停口时还得等它跑完），悬浮条上也只放得下最近两行
+ */
+const PREVIEW_SECONDS = 8;
+
 export function createLocalRefiner({ transcriber, polisher, log, model, onCall = () => {}, decode = toSpeech }) {
   /** 两跳之外的失败（解不开录音、本地转写出错）也报成 ModelError，服务端按同一套规矩告诉用户 */
   const failed = (problem, error) =>
@@ -59,6 +65,24 @@ export function createLocalRefiner({ transcriber, polisher, log, model, onCall =
 
     /** 开口时没什么要先备的：转写模型装在转写进程里，按需装载时由内置服务在开口那一刻装上（app/service.mjs） */
     async prepare() {},
+
+    /**
+     * 录音时先听一眼：解开到现在为止的录音，只转写最近 PREVIEW_SECONDS 秒，前面截掉了就在开头加省略号。
+     * 不润色、不记账、不写历史，也不算成品：服务端每来一块试一次，文字随时会被下一次取代，出错就丢掉
+     * @param {Buffer} audio 到现在为止累积的录音
+     * @param {{ mimeType: string, signal?: AbortSignal, vocabulary?: readonly string[], task?: object }} [options]
+     *   task：这一次的任务（../tasks 的 bind 回的）。字形在任务的收尾里转（dictate 要繁体时），
+     *   暂定文字也走同一步，不然繁体的用户在悬浮条上先看到一片简体
+     * @returns {Promise<{ text: string }>}
+     */
+    async preview(audio, { mimeType, signal, vocabulary = [], task = null } = {}) {
+      const samples = await decode(audio, mimeType);
+      const window = PREVIEW_SECONDS * SPEECH_SAMPLE_RATE;
+      const recent = samples.length > window ? samples.slice(-window) : samples;
+      const { text } = await transcriber.transcribe(recent, { signal, vocabulary });
+      const shown = task?.transcribe ? task.transcribe.finish(text).text : text;
+      return { text: recent !== samples && shown ? `…${shown}` : shown };
+    },
 
     /**
      * @param {{ task: object, mimeType: string, signal?: AbortSignal, audioId?: string, vocabulary?: readonly string[] }} options

@@ -150,6 +150,8 @@ export function createSettings({ refresh }) {
     );
     $("open-at-login").checked = setup.openAtLogin.enabled;
     $("open-at-login-row").hidden = !setup.openAtLogin.supported;
+    // 录音时在悬浮条上预览暂定文字：只有本机识别能做
+    $("live-preview").checked = setup.livePreview;
   }
 
   // ---------- 快捷键：每个动作的组合、悬浮条上的按键提示 ----------
@@ -235,6 +237,19 @@ export function createSettings({ refresh }) {
       showNote("output-script-note", result.note ?? null);
     } catch (error) {
       showNote("general-problem", t("preferences.outputScriptFailed", { reason: describeError(error) }), "problem");
+    }
+    await refresh();
+  });
+
+  // 录音时在悬浮条上预览暂定文字：存下来就行，服务端下一次录音现看开关
+  $("live-preview").addEventListener("change", async (event) => {
+    showNote("general-problem", null);
+    showNote("live-preview-note", null);
+    try {
+      const result = await window.speakmore.setLivePreview(event.target.checked);
+      showNote("live-preview-note", result.note ?? null);
+    } catch (error) {
+      showNote("general-problem", t("preferences.livePreviewFailed", { reason: describeError(error) }), "problem");
     }
     await refresh();
   });

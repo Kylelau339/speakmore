@@ -584,6 +584,7 @@ flowchart LR
 | `acceleration` | `auto` | 加速：`auto` / `cpu` |
 | `localModelMemory` | `resident` | 本机转文字模型的内存：`resident` / `1m` / `5m` / `10m` / `30m` |
 | `barHint` | `on` | 悬浮条操作提示：`on` / `off` |
+| `livePreview` | `on` | 说话时在悬浮条上预览文字（只有本机识别有，只看最近几秒）：`on` / `off` |
 | `outputScript` | `simplified` | 听写成品的中文字形：`simplified` / `traditional-hk` / `traditional-tw` |
 | `theme` | `ink` | 主题：`ink` / `cinnabar` / `indigo` |
 | `language` | `system` | 语言：`system` / `en` / `zh-CN` / `zh-TW` |

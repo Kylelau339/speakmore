@@ -30,6 +30,7 @@ const releaseAfterMs = (memory) => (memory === "resident" ? null : Number.parseI
  * @param {string} [options.localModelMemory] 本地模型常驻（resident），还是开口时装载、空闲多久后释放（1m、5m、10m、30m），
  *   设置里的 localModelMemory，换了调 setLocalModelMemory
  * @param {() => readonly string[]} [options.vocabulary] 用户的词典（storage/vocabulary.mjs 的 terms），服务端每次听写读一次
+ * @param {boolean} [options.livePreview] 录音时在悬浮条上显示暂定文字（设置里的 livePreview），换了调 setLivePreview
  * @param {typeof createModeRefiner} [options.createRefiner] 测试时换成假的
  * @param {typeof startTranscriber} [options.startLocal] 测试时换成假的
  */
@@ -43,6 +44,7 @@ export async function startService({
   acceleration: initialAcceleration = "auto",
   localModelMemory = "resident",
   vocabulary = () => [],
+  livePreview: initialLivePreview = true,
   createRefiner = createModeRefiner,
   startLocal = startTranscriber,
 }) {
@@ -60,6 +62,8 @@ export async function startService({
   let refiner = null;
   /** 换过几次路线（setRoute）：验 key 的途中换过，那一把是按旧路线验的，不装 */
   let switches = 0;
+  /** 录音时要不要在悬浮条上显示暂定文字（设置里的 livePreview）。改设置不用重启，下一次录音就按新的来 */
+  let livePreview = initialLivePreview;
 
   // ---------- 本地模型 ----------
 
@@ -193,6 +197,27 @@ export async function startService({
 
   followRoute();
 
+  /**
+   * 录音时的暂定文字：只解录音、跑本机转写，不润色、不记账、不写历史。
+   * 按需装载的模型还没装好时不等：这一次没字看，下一块再说（开口时 prepare 已经让它开始装了）
+   * @param {Buffer} audio 到现在为止累积的录音
+   * @param {{ mimeType: string, audioId: string, vocabulary?: readonly string[] }} options
+   * @returns {Promise<{ text: string } | null>} null 表示这一次没有文字可看
+   */
+  async function preview(audio, options) {
+    if (!refiner || typeof refiner.preview !== "function") return null;
+    if (releaseMs !== null && !loading?.transcriber) return null;
+    // 预览也算用着模型：空闲释放不能跑到一半把转写器卸掉
+    busy++;
+    clearTimeout(idleTimer);
+    try {
+      return await refiner.preview(audio, options);
+    } finally {
+      busy--;
+      restartIdleTimer();
+    }
+  }
+
   const server = await startServer({
     port: 0,
     log,
@@ -219,6 +244,10 @@ export async function startService({
       async prepare(options) {
         loadOnDemand();
         await refiner?.prepare?.(options);
+      },
+      // 服务端只看这个是不是函数：预览关着、或者这条路线做不了时，连排都不排
+      get preview() {
+        return livePreview && typeof refiner?.preview === "function" ? preview : null;
       },
     },
   });
@@ -260,6 +289,11 @@ export async function startService({
       if (!loading) return;
       releaseLocal();
       followRoute();
+    },
+
+    /** 换文字预览的开关：不用重启，下一次录音就按新的来 */
+    setLivePreview(value) {
+      livePreview = Boolean(value);
     },
 
     /**

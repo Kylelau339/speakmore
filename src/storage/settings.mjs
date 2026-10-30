@@ -42,8 +42,8 @@ const SOURCE_IDS = SOURCES.map((source) => source.id);
 export const ACCELERATIONS = Object.freeze(["auto", "cpu"]);
 /** 本机模型常驻内存，还是开口时装载、空闲这么久后释放（app/service.mjs）。内存紧的电脑选后几种，代价是隔久了第一句慢一两秒 */
 export const LOCAL_MODEL_MEMORY = Object.freeze(["resident", "1m", "5m", "10m", "30m"]);
-/** 悬浮条上方的操作提示（"再按一下 右⌥ 完成 · esc 取消"）显示不显示：熟练了的人嫌它一直挂着（GitHub issue #3） */
-export const BAR_HINTS = Object.freeze(["on", "off"]);
+/** 显示不显示的开关：on 显示，off 不显示 */
+export const SHOWN = Object.freeze(["on", "off"]);
 const THINKING_LEVELS = findProvider("gemini").thinkingLevels;
 /** 语音翻译最多列几种目标语言：悬浮条上的语言选单一种一行，再多放不下，也挑不过来 */
 export const MAX_TRANSLATE_TARGETS = 6;
@@ -66,6 +66,19 @@ const oneOf = (choices) => new LocalizedError(msg("settings.oneOf", { choices: c
  *   local 的两跳各有各的：transcriber 是第一跳（本机模型或云端模型），polish、customUrl、customParams 是第二跳。
  *   private（数据隐私）只有一跳：privateTranscriber，只能是本机模型；和 local 的第一跳分开存，各换各的。
  */
+/** 显示不显示的一项（SHOWN），默认显示 */
+const shownSetting = (env) => ({
+  env,
+  default: "on",
+  choices: SHOWN,
+  parse(value) {
+    const id = value.trim().toLowerCase();
+    if (!SHOWN.includes(id)) throw oneOf(SHOWN);
+    return id;
+  },
+  label: (value) => msg(`shown.${value}`),
+});
+
 export const SETTINGS = {
   // 每个动作一项 hotkey.<动作>：hotkey.dictate、hotkey.cancel（docs/hotkey-research.md 5.2）
   ...hotkeySettings(process.platform),
@@ -239,17 +252,8 @@ export const SETTINGS = {
     choices: null,
     parse: (value) => formatCustomParams(parseCustomParams(value)),
   },
-  barHint: {
-    env: "SPEAKMORE_BAR_HINT",
-    default: "on",
-    choices: BAR_HINTS,
-    parse(value) {
-      const id = value.trim().toLowerCase();
-      if (!BAR_HINTS.includes(id)) throw oneOf(BAR_HINTS);
-      return id;
-    },
-    label: (value) => msg(`barHints.${value}`),
-  },
+  // 悬浮条上方的操作提示（"再按一下 右⌥ 完成 · esc 取消"）：熟练了的人嫌它一直挂着（GitHub issue #3）
+  barHint: shownSetting("SPEAKMORE_BAR_HINT"),
   theme: {
     env: "SPEAKMORE_THEME",
     default: DEFAULT_THEME,
@@ -289,6 +293,8 @@ export const SETTINGS = {
     },
     label: (value) => msg(`outputScripts.${value}`),
   },
+  // 录音时在悬浮条上显示暂定的听写文字（服务端每来一块跑一次本机转写）。只有本机识别能预览，云端没有
+  livePreview: shownSetting("SPEAKMORE_LIVE_PREVIEW"),
 };
 
 /** 语音翻译的目标语言：一个、逗号隔开的几个，或者 JSON 数组；规整成去重后的 id 列表。至少一种，最多 MAX_TRANSLATE_TARGETS 种 */

@@ -87,8 +87,13 @@ export const MODES = Object.freeze([
         ...(decode ? { decode } : {}),
       });
       if (!cloud) return refiner;
-      // 验证时两跳都要验：第一跳的 key、模型也可能不对
-      return { ...refiner, warmUp: () => Promise.all([firstHop.warmUp(), refiner.warmUp()]).then(() => {}) };
+      // 第一跳在云端：预览等于每隔几秒把录音再传一次，不做，也不让上层误以为能做
+      return {
+        ...refiner,
+        preview: null,
+        // 验证时两跳都要验：第一跳的 key、模型也可能不对
+        warmUp: () => Promise.all([firstHop.warmUp(), refiner.warmUp()]).then(() => {}),
+      };
     },
   }),
   Object.freeze({

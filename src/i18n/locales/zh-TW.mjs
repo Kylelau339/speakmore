@@ -378,6 +378,7 @@ export default {
       "localModelMemory": "本機轉文字的模型常駐記憶體，還是空閒多久後釋放：resident 一直裝著；1m、5m、10m、30m 空閒這麼久後釋放，下次開口時再裝（隔久了第一句慢一兩秒）",
       "barHint": "懸浮條上方那行操作提示（再按一下 … 完成 · esc 取消）顯示不顯示：on 顯示，off 不顯示",
       "outputScript": "聽寫出來的中文字用簡體還是繁體；英文、數字、粵語用字不動",
+      "livePreview": "開口說話時在懸浮條上顯示暫定的文字，每隔幾秒更新一次：只有本機識別才有，最終結果照舊交出去",
       "translate": {
         "to": "語音翻譯譯成什麼：一種或幾種語言（en、ja，逗號隔開），第一種是預設，懸浮條上能臨時換成別的幾種"
       },
@@ -446,7 +447,7 @@ export default {
     "10m": "空閒 10 分鐘後釋放",
     "30m": "空閒 30 分鐘後釋放"
   },
-  "barHints": {
+  "shown": {
     "on": "顯示",
     "off": "不顯示"
   },
@@ -1102,6 +1103,8 @@ export default {
     "localModelMemoryFailed": "記憶體設定未能更換：{reason}",
     "barHint": "懸浮條上顯示按鍵提示",
     "outputScript": "輸出字形",
+    "livePreview": "說話時在懸浮條上預覽文字",
+    "livePreviewFailed": "預覽設定未能更換：{reason}",
     "openAtLogin": "開機啟動",
     "themeFailed": "主題沒換成：{reason}",
     "languageFailed": "語言沒換成：{reason}",

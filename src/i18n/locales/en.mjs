@@ -260,6 +260,8 @@ export default {
       barHint: "Whether the hint line above the voice bar (press … to finish · esc to cancel) shows: on or off",
       outputScript:
         "Whether dictated Chinese comes out simplified or traditional: English, numbers, and Cantonese-only characters stay as they are",
+      livePreview:
+        "Whether the voice bar shows provisional text while you speak, updated every few seconds: only on-device recognition has this, and the finished result still comes out the usual way",
       lookup: {
         to: "What selection translation translates into: one language; the card can switch to another for one go",
         model:
@@ -332,7 +334,8 @@ export default {
     "10m": "Release after 10 min idle",
     "30m": "Release after 30 min idle",
   },
-  barHints: {
+  // 显示不显示的开关（悬浮条上的操作提示、录音时的预览）
+  shown: {
     on: "Shown",
     off: "Hidden",
   },
@@ -935,6 +938,8 @@ export default {
     localModelMemoryFailed: "Memory setting not changed: {reason}",
     barHint: "Show key hints on the voice bar",
     outputScript: "Output script",
+    livePreview: "Preview words on the voice bar while speaking",
+    livePreviewFailed: "Preview setting not changed: {reason}",
     openAtLogin: "Launch at login",
     themeFailed: "Theme not changed: {reason}",
     languageFailed: "Language not changed: {reason}",

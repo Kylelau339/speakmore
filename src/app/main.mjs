@@ -487,6 +487,8 @@ async function main() {
         onLocalModel: () => localModelChanged(),
         acceleration,
         localModelMemory,
+        // 录音时的预览只有本机识别能做；关着时服务端连排都不排。换了调 service.setLivePreview
+        livePreview: SETTINGS.livePreview.value === "on",
         vocabulary: vocabulary.terms,
       });
   const serverUrl = EXTERNAL_SERVER_URL ?? service.url;
@@ -685,6 +687,9 @@ async function main() {
     JSON.parse(resolveSettings({ file: PATHS.settingsFile, env: process.env })["translate.to"].value);
   /** 听写成品的中文字形（设置里的 outputScript）。每次现读：设置里换了，下一次开口就按新的 */
   const currentOutputScript = () => resolveSettings({ file: PATHS.settingsFile, env: process.env }).outputScript.value;
+  /** 录音时要不要在悬浮条上显示暂定文字（设置里的 livePreview）。每次现读：设置里换了，下一次录音就按新的 */
+  const currentLivePreview = () =>
+    resolveSettings({ file: PATHS.settingsFile, env: process.env }).livePreview.value === "on";
   /**
    * 小帮手现在替谁截着 esc 和点击：bar（悬浮条，说话时）、lookup（划词卡片开着时）或 null。同一时间只有一个：
    * 开始说话时卡片收起；正在说话时不理划词。esc、截到的点击按它转给谁
@@ -1255,6 +1260,8 @@ async function main() {
       hotkeyActions: describeHotkeyActions(),
       theme: { value: theme.id, choices: THEMES.map(({ id }) => id) },
       barHint: currentBarHint(),
+      // 录音时在悬浮条上预览暂定文字：只有本机识别有，云端没有
+      livePreview: currentLivePreview(),
       // 语音翻译译成哪几种（第一种是默认）、能选哪些、最多几种
       translate: { to: currentTranslateTo(), choices: LANGUAGES.map(({ id }) => id), max: MAX_TRANSLATE_TARGETS },
       // 听写成品的中文字形、能选哪些（简体，繁体香港、台湾字形）
@@ -1539,6 +1546,16 @@ async function main() {
     tellBar("bar:hint", barHint);
     setupChanged();
     const variable = overridingEnv("barHint", process.env);
+    return variable === null ? {} : { note: msg("notes.envRemove", { variable }) };
+  });
+  // 设置 › 通用：录音时在悬浮条上预览暂定文字。下一次录音就按新的（服务端每次开口现看开关）
+  handle("setup:set-live-preview", (_event, wanted) => {
+    saveSetting(PATHS.settingsFile, "livePreview", wanted ? "on" : "off");
+    const value = currentLivePreview();
+    log.info("live_preview_changed", { livePreview: value });
+    service?.setLivePreview(value);
+    setupChanged();
+    const variable = overridingEnv("livePreview", process.env);
     return variable === null ? {} : { note: msg("notes.envRemove", { variable }) };
   });
   // 设置 › 通用：听写成品的中文字形。悬浮条每次开口现读，下一次说话就按新的

@@ -471,3 +471,185 @@ test("语音翻译没等到目标语言、写了不认识的语言：说清楚�
   assert.equal(invalid.V.code, "invalid_parameters");
   assert.equal(calls, 0);
 });
+
+/** 收到指定的那一种消息为止（中间的进度消息跳过）；等不到就是这次没发，报错 */
+async function until(client, kind, limit = 10) {
+  for (let i = 0; i < limit; i += 1) {
+    const message = await client.next();
+    if (message.K === kind) return message;
+  }
+  throw new Error(`没等到 ${kind}`);
+}
+
+test("本机识别：每收一块听一眼，回的是整条文字；正式整理用整段录音", async () => {
+  const previews = [];
+  const refined = [];
+  const port = await start({
+    async preview(audio, { audioId }) {
+      previews.push({ audio, audioId });
+      return { text: `听到${previews.length}` };
+    },
+    async refine(audio) {
+      refined.push(audio);
+      return done("成品");
+    },
+  });
+  const client = await connect(port);
+  client.sendJson({ type: "start_audio", audio_id: "p1", audio_chunk_time: 3, mode: "voice_transcript" });
+  await until(client, "audio_session_started");
+
+  const first = ogg("one");
+  await sendChunk(client, "p1", 1, first);
+  const firstPartial = await until(client, "audio_transcript_partial");
+  assert.deepEqual(firstPartial.V, { audio_id: "p1", text: "听到1" });
+  // 传进去的是到现在为止累积的录音，不是刚到的这一块
+  assert.deepEqual(previews[0].audio, first);
+  assert.equal(previews[0].audioId, "p1");
+
+  const second = ogg("two");
+  await sendChunk(client, "p1", 2, second);
+  const secondPartial = await until(client, "audio_transcript_partial");
+  assert.deepEqual(secondPartial.V, { audio_id: "p1", text: "听到2" });
+  assert.deepEqual(previews[1].audio, Buffer.concat([first, second]));
+
+  client.sendJson({ type: "end_audio", audio_id: "p1", total_duration: 5 });
+  const completed = await until(client, "audio_processing_completed");
+  assert.equal(completed.V.refined_text, "成品");
+  assert.deepEqual(refined, [Buffer.concat([first, second])]);
+});
+
+test("预览出错：只说一次，正式整理照常出成品", async () => {
+  const warnings = [];
+  const log = {
+    info() {},
+    warn: (event) => warnings.push(event),
+    error() {},
+  };
+  const port = await start(
+    {
+      async preview() {
+        throw new Error("解不开");
+      },
+      async refine() {
+        return done("成品");
+      },
+    },
+    { log },
+  );
+  const client = await connect(port);
+  client.sendJson({ type: "start_audio", audio_id: "e1", mode: "voice_transcript" });
+  await until(client, "audio_session_started");
+  await sendChunk(client, "e1", 1, ogg("one"));
+  await sendChunk(client, "e1", 2, ogg("two"));
+  client.sendJson({ type: "end_audio", audio_id: "e1", total_duration: 5 });
+  const completed = await until(client, "audio_processing_completed");
+  assert.equal(completed.V.refined_text, "成品");
+  assert.deepEqual(warnings, ["preview_failed"]);
+});
+
+test("认识不了预览的路线（原生、云端）：不发 partial，消息和原来一模一样", async () => {
+  const port = await start({
+    async refine() {
+      return done("成品");
+    },
+  });
+  const client = await connect(port);
+  const kinds = [];
+  const next = client.next;
+  client.next = async () => {
+    const message = await next();
+    kinds.push(message.K);
+    return message;
+  };
+  client.sendJson({ type: "start_audio", audio_id: "n1", mode: "voice_transcript" });
+  await client.next();
+  await sendChunk(client, "n1", 1, ogg("one"));
+  client.sendJson({ type: "end_audio", audio_id: "n1", total_duration: 5 });
+  await until(client, "audio_processing_completed");
+  assert.deepEqual(kinds, [
+    "audio_session_started",
+    "received_audio_chunk_count",
+    "audio_session_ending",
+    "audio_processing_completed",
+  ]);
+});
+
+test("语音翻译不预览：本机能预览也不发（译的是别的话，听了也只是听写）", async () => {
+  const previews = [];
+  const port = await start({
+    async preview() {
+      previews.push(1);
+      return { text: "不该出现" };
+    },
+    async refine() {
+      return done("译文");
+    },
+  });
+  const client = await connect(port);
+  client.sendJson({ type: "start_audio", audio_id: "tr1", mode: "voice_translation" });
+  await until(client, "audio_session_started");
+  client.sendJson({
+    type: "set_mode_config",
+    audio_id: "tr1",
+    mode: "translation",
+    parameters: { output_language: "ja" },
+  });
+  await sendChunk(client, "tr1", 1, ogg("one"));
+  client.sendJson({ type: "end_audio", audio_id: "tr1", total_duration: 5 });
+  await until(client, "audio_processing_completed");
+  assert.deepEqual(previews, []);
+});
+
+test("说完了才跑完的那一眼：不发，成品照常（迟到的字不能盖到已经结束的录音上）", async () => {
+  let release;
+  const port = await start({
+    preview: () =>
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    async refine() {
+      return done("成品");
+    },
+  });
+  const client = await connect(port);
+  client.sendJson({ type: "start_audio", audio_id: "s1", mode: "voice_transcript" });
+  await until(client, "audio_session_started");
+  await sendChunk(client, "s1", 1, ogg("one"));
+  client.sendJson({ type: "end_audio", audio_id: "s1", total_duration: 5 });
+  const ending = await client.next();
+  assert.equal(ending.K, "audio_session_ending");
+  // 正式整理排在预览后面：这一眼跑完，成品才出来；这一眼的结果不往回发
+  release({ text: "迟到的字" });
+  const completed = await client.next();
+  assert.equal(completed.K, "audio_processing_completed");
+  assert.equal(completed.V.refined_text, "成品");
+});
+
+test("暂定文字按这一次的字形来：要繁体时回来的也是繁体（和成品同一处收尾）", async () => {
+  const seen = [];
+  const port = await start({
+    async preview(_audio, { task }) {
+      seen.push(task.id);
+      return { text: task.transcribe.finish("设置").text };
+    },
+    async refine(_audio, { task }) {
+      return { text: task.transcribe.finish("设置").text, source: null };
+    },
+  });
+  const client = await connect(port);
+  client.sendJson({ type: "start_audio", audio_id: "hk1", mode: "voice_transcript" });
+  await until(client, "audio_session_started");
+  client.sendJson({
+    type: "set_mode_config",
+    audio_id: "hk1",
+    mode: "transcript",
+    parameters: { output_script: "traditional-hk" },
+  });
+  await sendChunk(client, "hk1", 1, ogg("one"));
+  const partial = await until(client, "audio_transcript_partial");
+  assert.equal(partial.V.text, "設置");
+  assert.deepEqual(seen, ["dictate"]);
+  client.sendJson({ type: "end_audio", audio_id: "hk1", total_duration: 5 });
+  const completed = await until(client, "audio_processing_completed");
+  assert.equal(completed.V.refined_text, "設置");
+});

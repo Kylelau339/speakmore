@@ -772,3 +772,89 @@ test("等着开口、或还没下载时，模型库的每次变化（下载进�
   for (let i = 0; i < 3; i++) service.modelsChanged();
   assert.equal(changes, missing + 3, "还没下载的只报进度那一次，不再多翻成 off");
 });
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * 按听写协议发一小段"录音"，把中途的暂定文字也收下来。
+ * 块之间、停口之前都留一点时间：预览是在收完块之后接着跑的，紧跟着停口就来不及发
+ */
+function dictateWithPreviews(url, { chunks = 1, gapMs = 120 } = {}) {
+  return new Promise((resolve, reject) => {
+    const socket = new WebSocket(url);
+    const audioId = crypto.randomUUID();
+    const previews = [];
+    socket.onerror = () => reject(new Error("连不上内置服务"));
+    socket.onopen = async () => {
+      socket.send(JSON.stringify({ type: "start_audio", audio_id: audioId }));
+      for (let index = 1; index <= chunks; index += 1) {
+        socket.send(JSON.stringify({ type: "set_audio_chunk_info", audio_id: audioId, index, size: OGG_CHUNK.length }));
+        socket.send(OGG_CHUNK);
+        await sleep(gapMs);
+      }
+      socket.send(JSON.stringify({ type: "end_audio", audio_id: audioId }));
+    };
+    socket.onmessage = ({ data }) => {
+      const message = JSON.parse(data);
+      if (message.K === "audio_transcript_partial") previews.push(message.V.text);
+      if (message.K === "audio_processing_completed" || message.K === "audio_processing_error") {
+        socket.close();
+        resolve({ message, previews });
+      }
+    };
+  });
+}
+
+/** 本机识别那种：能预览，预览只解录音、出眼下听到的字 */
+const previewingRefiner = (text, seen = []) => ({
+  async warmUp() {},
+  async refine() {
+    return { text, source: null };
+  },
+  async preview(audio, options) {
+    seen.push({ bytes: audio.length, audioId: options.audioId, mimeType: options.mimeType });
+    return { text: `听到${audio.length}` };
+  },
+});
+
+test("录音时的暂定文字：默认开着，服务端按块拿整段录音去本机听一眼；成品照旧是整理的", async (t) => {
+  const seen = [];
+  const service = await startService({
+    log: quietLog,
+    route: GEMINI,
+    createRefiner: () => previewingRefiner("成品", seen),
+  });
+  t.after(() => service.close());
+  await service.useKey("key-1");
+  const { message, previews } = await dictateWithPreviews(service.url, { chunks: 2 });
+  assert.equal(message.V.refined_text, "成品");
+  assert.deepEqual(previews, ["听到64", "听到128"]);
+  // 交给预览的是到现在为止累积的录音，格式照这一次录音
+  assert.deepEqual(
+    seen.map(({ bytes, mimeType }) => ({ bytes, mimeType })),
+    [
+      { bytes: 64, mimeType: "audio/ogg" },
+      { bytes: 128, mimeType: "audio/ogg" },
+    ],
+  );
+});
+
+test("设置里关了文字预览：服务端连排都不排；当场打开，下一次录音就按新的来", async (t) => {
+  const seen = [];
+  const service = await startService({
+    log: quietLog,
+    route: GEMINI,
+    livePreview: false,
+    createRefiner: () => previewingRefiner("成品", seen),
+  });
+  t.after(() => service.close());
+  await service.useKey("key-1");
+  assert.deepEqual((await dictateWithPreviews(service.url)).previews, []);
+  assert.deepEqual(seen, []);
+
+  service.setLivePreview(true);
+  assert.deepEqual((await dictateWithPreviews(service.url)).previews, ["听到64"]);
+
+  service.setLivePreview(false);
+  assert.deepEqual((await dictateWithPreviews(service.url)).previews, []);
+});

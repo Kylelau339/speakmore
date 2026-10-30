@@ -7,6 +7,7 @@ import {
   LINGER_MS,
   picksChip,
   showsChip,
+  showsPreview,
   View,
   viewOf,
 } from "../../../src/renderer/bar/bar-view.mjs";
@@ -115,4 +116,11 @@ test("等成品时写功能自己的那句（语音翻译写翻译中）；功�
     [View.STARTING, View.RECORDING, View.FINISHING, View.DONE, View.NOTICE, View.ERROR, View.HIDDEN].map(picksChip),
     [true, true, false, false, false, false, false],
   );
+});
+
+test("录音时的暂定文字只在正在听时画：打开麦克风、等成品、出错、收起来都不画", () => {
+  assert.equal(showsPreview(View.RECORDING), true);
+  for (const view of [View.HIDDEN, View.STARTING, View.FINISHING, View.DONE, View.NOTICE, View.ERROR]) {
+    assert.equal(showsPreview(view), false, view);
+  }
 });

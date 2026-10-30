@@ -107,6 +107,16 @@ function sendMode(current) {
   voice.configure({ configMode: current.feature.configMode, parameters });
 }
 
+/**
+ * 录音时的暂定文字：只画在悬浮条的录音块上，不进输入栏、不碰剪贴板，也不进历史。
+ * 迟到的那一次录音的消息（换过 session）、取消了的、已经不在听的、升级成翻译的，都不算
+ */
+function showPreview(current, text) {
+  if (session !== current || current.cancelled) return;
+  if (state.phase !== Phase.RECORDING || current.feature?.id !== "dictate") return;
+  ui.setPreview(text);
+}
+
 function start() {
   const current = {
     audioId: crypto.randomUUID(),
@@ -118,6 +128,7 @@ function start() {
     begun: null,
   };
   session = current;
+  ui.setPreview(null);
   // 设置每次开口时现读：设置里换了目标语言，下一次就按新的
   current.ready = window.speakmore.sessionConfig().then((config) => {
     current.config = config;
@@ -128,6 +139,7 @@ function start() {
       mode: current.feature.mode,
       configMode: current.feature.configMode,
       parameters: current.feature.parameters(current.state),
+      onPartial: (text) => showPreview(current, text),
     }),
   );
   (async () => {
@@ -160,6 +172,8 @@ function switchFeature() {
     .then(() => {
       if (session !== current) return;
       adopt(current, action, current.config);
+      // 升级成翻译：刚才那些暂定的听写文字不再作数
+      ui.setPreview(null);
       return current.begun.then(() => {
         if (session === current) sendMode(current);
       });

@@ -192,3 +192,44 @@ test("本机转写那一跳也记一笔账：是哪个模型、转了多久，�
   );
   assert.ok(log.events.some(({ event }) => event === "model_call_not_recorded"));
 });
+
+test("预览：只解录音、跑转写，不润色、不记账；整段取代，词典照样带上", async () => {
+  const log = recordingLog();
+  const { seen, decode, transcriber, polisher } = parts({ transcript: "听到这里" });
+  const refiner = createLocalRefiner({ transcriber, polisher, log, decode });
+  const vocabulary = ["Runzo"];
+  const result = await refiner.preview(Buffer.from("webm"), { mimeType: "audio/webm", vocabulary });
+  assert.deepEqual(result, { text: "听到这里" });
+  assert.deepEqual(seen.decoded, [{ audio: Buffer.from("webm"), mimeType: "audio/webm" }]);
+  assert.equal(seen.transcribed[0], SAMPLES);
+  assert.deepEqual(seen.transcribeOptions.vocabulary, vocabulary);
+  // 预览不是成品：不走润色，也不记一笔
+  assert.deepEqual(seen.polished, []);
+  assert.deepEqual(log.events, []);
+});
+
+test("预览只转写最近 8 秒：说得再久每次的开销也不涨，条上放得下的也就是最近这几句；前面截掉了就在开头加省略号", async () => {
+  const { seen, transcriber, polisher } = parts({ transcript: "最近这几句" });
+  const long = Float32Array.from({ length: 20 * 16_000 }, (_, i) => i);
+  const refiner = createLocalRefiner({ transcriber, polisher, log: recordingLog(), decode: async () => long });
+  assert.deepEqual(await refiner.preview(Buffer.from("webm"), { mimeType: "audio/webm" }), { text: "…最近这几句" });
+  assert.equal(seen.transcribed[0].length, 8 * 16_000);
+  assert.equal(seen.transcribed[0][0], 12 * 16_000);
+});
+
+test("预览出错照实抛出来（上层丢掉这一次，只记一条警告）；转写照样能继续", async () => {
+  const { decode, transcriber } = parts({ transcribeError: new ModelError({ kind: "asr", detail: "坏了" }) });
+  const refiner = createLocalRefiner({ transcriber, polisher: parts().polisher, log: recordingLog(), decode });
+  await assert.rejects(() => refiner.preview(Buffer.from("webm"), { mimeType: "audio/webm" }), ModelError);
+});
+
+test("预览也按这一次的字形收尾：要繁体时条上不会先出现简体", async () => {
+  const { decode, transcriber } = parts({ transcript: "设置" });
+  const refiner = createLocalRefiner({ transcriber, polisher: parts().polisher, log: recordingLog(), decode });
+  const hk = findTask("dictate").bind({ output_script: "traditional-hk" });
+  assert.deepEqual(await refiner.preview(Buffer.from("webm"), { mimeType: "audio/webm", task: hk }), {
+    text: "設置",
+  });
+  // 没给任务（或者要的是简体）就照转写原样交出
+  assert.deepEqual(await refiner.preview(Buffer.from("webm"), { mimeType: "audio/webm" }), { text: "设置" });
+});

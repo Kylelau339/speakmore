@@ -51,11 +51,12 @@ export class VoiceSocket {
    * 开始一次录音。连不上会在这里抛出。
    * 模式照原版：start_audio 写内部名（mode），要参数的紧跟一条 set_mode_config（configMode 和参数）
    * @param {string} audioId
-   * @param {{ mode?: string, configMode?: string, parameters?: object | null }} [options] 不写是语音输入
+   * @param {{ mode?: string, configMode?: string, parameters?: object | null, onPartial?: ((text: string) => void) | null }} [options]
+   *   不写是语音输入；onPartial 是录音时的暂定文字（本机识别才有），每次来一整条，取代上一条
    */
-  async begin(audioId, { mode = "voice_transcript", configMode, parameters = null } = {}) {
+  async begin(audioId, { mode = "voice_transcript", configMode, parameters = null, onPartial = null } = {}) {
     const socket = await this.#connected();
-    this.#current = { audioId, nextIndex: 1, sending: Promise.resolve(), failure: null, settle: null };
+    this.#current = { audioId, nextIndex: 1, sending: Promise.resolve(), failure: null, settle: null, onPartial };
     socket.send(
       JSON.stringify({
         type: "start_audio",
@@ -162,6 +163,10 @@ export class VoiceSocket {
     // 上一次录音迟到的消息不能算到这一次头上
     if (!current || (value.audio_id && value.audio_id !== current.audioId)) return;
     switch (kind) {
+      // 录音时的暂定文字：后一条整个取代前一条；空的不当一回事，条上留着上一次的比清空好
+      case "audio_transcript_partial":
+        if (typeof value.text === "string" && value.text.length > 0) current.onPartial?.(value.text);
+        break;
       case "audio_processing_completed":
         current.settle?.resolve({ text: value.refined_text, source: value.source_text ?? null });
         break;
