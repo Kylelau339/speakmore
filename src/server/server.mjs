@@ -85,6 +85,17 @@ function handleConnection(socket, { refiner, log, maxAudioBytes, vocabularyFor, 
   let session = null;
   /** 正在进行的整理，连接断开时用来取消 */
   const refining = new Set();
+  /**
+   * 录音时先听一眼：最多一条在跑，跑的时候来了新块只留最新那一份快照。
+   * 预览用的是同一个本机模型，只能一条一条来（转写进程自己也会排队，见 asr/worker.mjs）
+   */
+  let previewPending = null;
+  let previewChain = Promise.resolve();
+  /** 同一次录音只记第一条预览失败，免得每三秒刷一条 */
+  let previewFailed = false;
+  let previewSequence = 0;
+  /** 预览用的词典：一次录音只读一次（每块都读文件没必要，坏了还会刷警告） */
+  let previewVocabulary = { audioId: null, terms: [] };
 
   const send = (kind, value) => {
     if (socket.readyState !== WebSocket.OPEN) {
@@ -116,6 +127,10 @@ function handleConnection(socket, { refiner, log, maxAudioBytes, vocabularyFor, 
           throw new ProtocolError("unknown_mode", `不认识的模式：${message.mode}`);
         }
         session = new RecordingSession(message.audioId, { maxTotalBytes: maxAudioBytes, definition });
+        // 新的一次录音：上一次的预览已经过时，别让它在跑完之后冒出来
+        previewPending = null;
+        previewFailed = false;
+        previewVocabulary = { audioId: null, terms: [] };
         // 不要参数的任务开口就定下来；要参数的（翻译要目标语言）等紧跟着的 set_mode_config
         if (definition.parameters.length === 0) settle(session, {});
         send(ServerType.STARTED, { audio_id: message.audioId, start_time: Date.now() });
@@ -138,6 +153,8 @@ function handleConnection(socket, { refiner, log, maxAudioBytes, vocabularyFor, 
       case ClientType.END: {
         const finished = requireSession(message.audioId);
         session = null;
+        // 不再排新的预览；正在跑的那一眼让它跑完，正式整理要排在它后面
+        previewPending = null;
         // 整理要等上游一两秒，不能卡住这条连接上后面的消息
         finish(finished).catch((error) => failConnection(error));
         break;
@@ -161,9 +178,62 @@ function handleConnection(socket, { refiner, log, maxAudioBytes, vocabularyFor, 
       .catch((error) => log.warn("prepare_failed", { audio_id: current.audioId, error: String(error?.message) }));
   };
 
+  /**
+   * 收完一块就试着听一眼：只有语音输入、本机识别（refiner 带 preview）才做。
+   * 排队用一条链：来新块时只把最新的快照放进去，前面排着的链跑起来发现没活就立刻让开
+   */
+  const schedulePreview = (current) => {
+    if (typeof refiner.preview !== "function") return;
+    if (current.definition.id !== "dictate") return;
+    if (current.chunkCount === 0) return;
+    if (previewVocabulary.audioId !== current.audioId) {
+      previewVocabulary = { audioId: current.audioId, terms: vocabularyFor(current.audioId) };
+    }
+    previewPending = {
+      current,
+      audio: current.merge(),
+      mimeType: current.mimeType,
+      vocabulary: previewVocabulary.terms,
+      // 这一块到的时候的任务：要繁体的话转字形这一步在任务的收尾里，预览也得按同一份来
+      task: current.task,
+    };
+    previewChain = previewChain.then(runPreview);
+  };
+
+  /** 跑一眼预览。失败只是这一次没文字可看，不影响正式整理，也不写历史 */
+  const runPreview = async () => {
+    const job = previewPending;
+    if (!job) return;
+    previewPending = null;
+    try {
+      const { text } = await refiner.preview(job.audio, {
+        mimeType: job.mimeType,
+        audioId: job.current.audioId,
+        vocabulary: job.vocabulary,
+        task: job.task,
+      });
+      // 跑这段时间里录音结束了、换了新的一次、或者切成了语音翻译：这份文字已经过时，不发
+      if (job.current !== session || session.definition.id !== "dictate") return;
+      if (typeof text !== "string" || text.length === 0) return;
+      previewSequence += 1;
+      send(ServerType.AUDIO_TRANSCRIPT_PARTIAL, {
+        audio_id: session.audioId,
+        sequence: previewSequence,
+        text,
+      });
+    } catch (error) {
+      if (!previewFailed) {
+        previewFailed = true;
+        log.warn("preview_failed", { audio_id: job.current.audioId, error: String(error?.message ?? error) });
+      }
+    }
+  };
+
   const onChunk = (data) => {
-    const { index, size } = requireSession().addChunk(data);
+    const current = requireSession();
+    const { index, size } = current.addChunk(data);
     send(ServerType.CHUNK_RECEIVED, { index, server_t: Date.now(), size });
+    schedulePreview(current);
   };
 
   const finish = async (finished) => {
@@ -199,6 +269,9 @@ function handleConnection(socket, { refiner, log, maxAudioBytes, vocabularyFor, 
       completed_chunks: finished.chunkCount,
       failed_chunks: 0,
     });
+
+    // 预览还在跑就先等它跑完：同一个本机模型不能同时跑两份推理，正式整理排队跟在后面
+    await previewChain;
 
     const abort = new AbortController();
     refining.add(abort);
@@ -286,6 +359,7 @@ function handleConnection(socket, { refiner, log, maxAudioBytes, vocabularyFor, 
   socket.on("close", (code) => {
     if (session) log.info("session_abandoned", { audio_id: session.audioId, chunks: session.chunkCount, code });
     session = null;
+    previewPending = null;
     for (const abort of refining) abort.abort();
   });
 }

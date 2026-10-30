@@ -60,6 +60,7 @@ test("没有文件也没有环境变量时全用默认值", () => {
     "lookup.customParams": { value: "", source: "default" },
     barHint: { value: "on", source: "default" },
     outputScript: { value: "simplified", source: "default" },
+    livePreview: { value: "on", source: "default" },
     theme: { value: "ink", source: "default" },
     language: { value: "system", source: "default" },
   });
@@ -179,6 +180,17 @@ test("听写的成品字形：简体，或者繁体（香港、台湾字形）�
     source: "env",
   });
   assert.throws(() => saveSetting(file, "outputScript", "zh-Hant"), /simplified \/ traditional-hk \/ traditional-tw/);
+});
+
+test("说话时在悬浮条上预览暂定文字：默认开，能关掉；大小写都认，别的不收", () => {
+  assert.equal(resolveSettings({ file: join(dir, "none.json"), env: {} }).livePreview.value, "on");
+  saveSetting(file, "livePreview", "OFF");
+  assert.deepEqual(resolveSettings({ file, env: {} }).livePreview, { value: "off", source: "file" });
+  assert.deepEqual(resolveSettings({ file, env: { SPEAKMORE_LIVE_PREVIEW: "on" } }).livePreview, {
+    value: "on",
+    source: "env",
+  });
+  assert.throws(() => saveSetting(file, "livePreview", "yes"), /on \/ off/);
 });
 
 test("模型：写成 厂商/模型，只写厂商就用它的默认模型；存下来的都是 厂商/模型", () => {

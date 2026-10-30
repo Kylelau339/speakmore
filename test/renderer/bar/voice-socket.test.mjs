@@ -1,7 +1,9 @@
 // 客户端的通信模块直接对着真的服务端模块跑（模型那一步换成假的），
 // 这样两端对协议的理解有出入时，这里会先红。
 import assert from "node:assert/strict";
+import { once } from "node:events";
 import { afterEach, test } from "node:test";
+import { WebSocketServer } from "ws";
 import { createTranslator, LocalizedError, msg } from "../../../src/i18n/index.mjs";
 import { VoiceSocket } from "../../../src/renderer/bar/voice-socket.mjs";
 import { startServer, WS_PATH } from "../../../src/server/server.mjs";
@@ -22,14 +24,15 @@ afterEach(async () => {
   server = undefined;
 });
 
-/** refine 给出成品的那段字（语音输入，source 是 null），或者整个成品 { text, source } */
-async function start(refine) {
+/** refine 给出成品的那段字（语音输入，source 是 null），或者整个成品 { text, source }；preview 是录音时那一眼 */
+async function start(refine, { preview = null } = {}) {
   const refiner = {
     async refine(...args) {
       const result = await refine(...args);
       return typeof result === "string" ? { text: result, source: null } : result;
     },
   };
+  if (preview) refiner.preview = preview;
   server = await startServer({ port: 0, refiner, log: silentLog });
   voice = new VoiceSocket(`ws://127.0.0.1:${server.port}${WS_PATH}`);
   return voice;
@@ -159,4 +162,64 @@ test("升级：开口时是语音输入，说着话换成语音翻译", async ()
   await socket.finish({ durationSeconds: 1 });
   assert.equal(seen, "translate");
   assert.throws(() => socket.configure({ configMode: "translation" }), /还没有开始录音/);
+});
+
+test("录音时的暂定文字：每块回一条，忙碌时只留最新的快照；成品照旧", async () => {
+  const seen = [];
+  let calls = 0;
+  const socket = await start(async () => "成品", {
+    async preview(audio) {
+      calls += 1;
+      const text = `第${calls}次:${audio.length}`;
+      // 第一眼故意慢一点：后面两块这时都到了，只有最后那块该再听一遍
+      if (calls === 1) await new Promise((resolve) => setTimeout(resolve, 120));
+      return { text };
+    },
+  });
+  await socket.begin("a1", { onPartial: (text) => seen.push(text) });
+  socket.sendChunk(webm("one"));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  socket.sendChunk(webm("two"));
+  socket.sendChunk(webm("333"));
+  // 等这两眼跑完再停口：停口之后跑完的那一眼不算数（服务端那边已经收掉这一次了）
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.deepEqual(await socket.finish({ durationSeconds: 9 }), { text: "成品", source: null });
+  // 第一条是第一块；第二条已经是三块首尾相接的了（中间那块来不及单独听）
+  assert.deepEqual(seen, ["第1次:7", "第2次:21"]);
+  assert.equal(calls, 2);
+});
+
+test("暂定文字认录音号和新序号：别的录音、重复的、倒回去的、空的、序号不是整数都不要", async () => {
+  const wss = new WebSocketServer({ port: 0 });
+  await once(wss, "listening");
+  let peer = null;
+  wss.on("connection", (connected) => {
+    peer = connected;
+  });
+  const socket = new VoiceSocket(`ws://127.0.0.1:${wss.address().port}${WS_PATH}`);
+  voice = socket;
+  const seen = [];
+  await socket.begin("p1", { onPartial: (text) => seen.push(text) });
+  while (peer === null) await new Promise((resolve) => setTimeout(resolve, 5));
+
+  const say = (value) =>
+    peer.send(JSON.stringify({ K: "audio_transcript_partial", V: value, T: "json", M: false, S: "done" }));
+  say({ audio_id: "别的", sequence: 9, text: "不是这一次的" });
+  say({ audio_id: "p1", sequence: 2, text: "第二次" });
+  say({ audio_id: "p1", sequence: 2, text: "重复的第二次" });
+  say({ audio_id: "p1", sequence: 1, text: "倒回去的第一次" });
+  say({ audio_id: "p1", sequence: 3, text: "" });
+  say({ audio_id: "p1", sequence: "4", text: "序号不是整数" });
+  say({ audio_id: "p1", sequence: 4, text: "第四次" });
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.deepEqual(seen, ["第二次", "第四次"]);
+
+  // 收起来之后（取消了、换下一次了）再来的一概不算
+  socket.abandon();
+  say({ audio_id: "p1", sequence: 5, text: "收起来以后的" });
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.deepEqual(seen, ["第二次", "第四次"]);
+
+  socket.close();
+  await new Promise((resolve) => wss.close(resolve));
 });

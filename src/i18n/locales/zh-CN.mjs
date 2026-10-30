@@ -248,6 +248,7 @@ export default {
         "本机转文字的模型常驻内存，还是空闲多久后释放：resident 一直装着；1m、5m、10m、30m 空闲这么久后释放，下次开口时再装（隔久了第一句慢一两秒）",
       barHint: "悬浮条上方那行操作提示（再按一下 … 完成 · esc 取消）显示不显示：on 显示，off 不显示",
       outputScript: "听写出来的中文字用简体还是繁体；英文、数字、粤语用字不动",
+      livePreview: "开口说话时在悬浮条上显示暂定的文字，每隔几秒更新一次：只有本机识别才有，最终结果照旧交出去",
       translate: {
         to: "语音翻译译成什么：一种或几种语言（en、ja，逗号隔开），第一种是默认，悬浮条上能临时换成别的几种",
       },
@@ -324,6 +325,10 @@ export default {
     simplified: "简体",
     "traditional-hk": "繁体（香港）",
     "traditional-tw": "繁体（台湾）",
+  },
+  livePreviews: {
+    on: "显示",
+    off: "不显示",
   },
   localModels: {
     tags: {
@@ -490,6 +495,8 @@ export default {
     secureInput: "有应用开着安全输入，部分组合键暂时用不了",
     // 只有 Windows 有：系统不把发给管理员窗口的按键交给我们
     elevatedForeground: "前台是以管理员身份运行的窗口，在它上面快捷键用不了",
+    // 录音时悬浮条上的暂定文字：不是最终结果，停口后会被正式结果取代
+    previewLabel: "听到这里",
   },
 
   tray: {
@@ -900,6 +907,8 @@ export default {
     localModelMemoryFailed: "内存设置未能更换：{reason}",
     barHint: "悬浮条上显示按键提示",
     outputScript: "输出字形",
+    livePreview: "说话时在悬浮条上预览文字",
+    livePreviewFailed: "预览设置未能更换：{reason}",
     openAtLogin: "开机启动",
     themeFailed: "主题没换成：{reason}",
     languageFailed: "语言没换成：{reason}",

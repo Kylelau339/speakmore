@@ -61,6 +61,21 @@ export function createLocalRefiner({ transcriber, polisher, log, model, onCall =
     async prepare() {},
 
     /**
+     * 录音时先听一眼：只解开录音、跑本机转写，拿到眼下听到的文字。
+     * 不润色、不记账、不写历史，也不算成品：服务端每隔几块试一次，文字随时会被下一次取代，出错就丢掉
+     * @param {Buffer} audio 到现在为止累积的录音
+     * @param {{ mimeType: string, signal?: AbortSignal, vocabulary?: readonly string[], task?: object }} [options]
+     *   task：这一次的任务（../tasks 的 bind 回的）。转写字形那一步在任务的收尾里（dictate 要繁体时在这一步转），
+     *   暂定文字也走同一步，不然繁体的用户在悬浮条上先看到一片简体
+     * @returns {Promise<{ text: string }>}
+     */
+    async preview(audio, { mimeType, signal, vocabulary = [], task = null } = {}) {
+      const samples = await decode(audio, mimeType);
+      const { text } = await transcriber.transcribe(samples, { signal, vocabulary });
+      return { text: task?.transcribe ? task.transcribe.finish(text).text : text };
+    },
+
+    /**
      * @param {{ task: object, mimeType: string, signal?: AbortSignal, audioId?: string, vocabulary?: readonly string[] }} options
      *   task：这一次的任务（../tasks 的 bind 回的）
      * @returns {Promise<{ text: string, source: string | null }>} 任务收好的成品

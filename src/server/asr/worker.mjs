@@ -16,7 +16,12 @@ import { loadTranscriber } from "./engines/index.mjs";
  */
 export function serveTranscriber(channel, load = loadTranscriber) {
   let transcriber = null;
-  channel.on("message", async (message) => {
+  // 一条一条来：同一个模型不能同时跑两份推理（录音时的预览和最后的正式转写都会进来）。
+  // 消息照收，按到达的次序排队；dispose 之后不再接新活，让前面的先做完再走。
+  let queue = Promise.resolve();
+  let closing = false;
+
+  const handle = async (message) => {
     switch (message?.type) {
       case "load": {
         const startedAt = performance.now();
@@ -51,6 +56,12 @@ export function serveTranscriber(channel, load = loadTranscriber) {
       default:
         channel.send({ type: "error", id: message?.id ?? null, message: `不认识的消息：${message?.type}` });
     }
+  };
+
+  channel.on("message", (message) => {
+    if (closing) return;
+    if (message?.type === "dispose") closing = true;
+    queue = queue.then(() => handle(message));
   });
 }
 

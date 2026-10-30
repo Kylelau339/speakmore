@@ -4,7 +4,7 @@
 // 提示行左边可以有一个胶囊（功能给的，语音翻译是目标语言）：鼠标移上去展开几个选项，点了交给 onPick。
 // 窗口本身点不到，鼠标移动是主进程转过来的（setIgnoreMouseEvents 的 forward），点击和条上两个按钮一样由小帮手截下来。
 
-import { controlsIn, hintFor, LINGER_MS, picksChip, showsChip, View } from "./bar-view.mjs";
+import { controlsIn, hintFor, LINGER_MS, picksChip, showsChip, showsPreview, View } from "./bar-view.mjs";
 import { createWave, REST, WAVE_BARS } from "./wave.mjs";
 
 /** 整理中那道波有几根竖条 */
@@ -38,6 +38,9 @@ export function createBarUi({ document, host, keys: initialKeys, t: initialT, on
   const { body } = document;
   const hint = document.getElementById("hint");
   const chipHost = document.getElementById("chip");
+  const previewHost = document.getElementById("preview");
+  const previewLabel = document.getElementById("preview-label");
+  const previewText = document.getElementById("preview-text");
   const message = document.getElementById("message");
   const buttons = { cancel: document.getElementById("cancel"), confirm: document.getElementById("confirm") };
   const window = document.defaultView;
@@ -75,6 +78,8 @@ export function createBarUi({ document, host, keys: initialKeys, t: initialT, on
   let chipOpen = false;
   /** 等成品时提示行写什么（功能自己的那句）；null 是默认的 */
   let finishing = null;
+  /** 录音时的暂定文字：服务端每隔几块来一条，整条取代上一条；null 是没有可画的 */
+  let preview = null;
 
   function drawWave(heights) {
     for (const [index, bar] of waveBars.entries()) bar.style.setProperty("--h", heights[index].toFixed(3));
@@ -161,6 +166,18 @@ export function createBarUi({ document, host, keys: initialKeys, t: initialT, on
     chipHost.replaceChildren(menu, button);
   }
 
+  /** 录音时的暂定文字：只在正在听时画，写完就换掉；文字只写 textContent，不拼 HTML */
+  function drawPreview() {
+    const visible = preview !== null && showsPreview(view);
+    previewHost.hidden = !visible;
+    if (!visible) {
+      previewText.textContent = "";
+      return;
+    }
+    previewLabel.textContent = t("bar.previewLabel");
+    previewText.textContent = preview;
+  }
+
   function setChipOpen(open) {
     const next = open && choosable();
     if (next === chipOpen) return;
@@ -211,6 +228,9 @@ export function createBarUi({ document, host, keys: initialKeys, t: initialT, on
   function hide() {
     view = View.HIDDEN;
     chipOpen = false;
+    // 收起来时暂定文字一并丢掉：下一次开口不许先闪出上一次的字
+    preview = null;
+    drawPreview();
     syncCapture();
     syncWave();
     // 样子先不换：照着现在的样子淡出去，淡完再把窗口收起来
@@ -240,6 +260,7 @@ export function createBarUi({ document, host, keys: initialKeys, t: initialT, on
       message.textContent = text ?? "";
       drawHint();
       drawChip();
+      drawPreview();
       syncWave();
       if (body.dataset.shown !== "true") {
         host.setVisible(true);
@@ -285,6 +306,18 @@ export function createBarUi({ document, host, keys: initialKeys, t: initialT, on
       wave.hear(value, window.performance.now());
     },
 
+    /**
+     * 录音时的暂定文字：后一条整个取代前一条，null 是清掉。只画在这里，不进输入栏、不碰剪贴板；
+     * 到底是不是还在听、是不是这条录音，由调用方判断
+     * @param {string | null} text
+     */
+    setPreview(text) {
+      const next = typeof text === "string" && text.length > 0 ? text : null;
+      if (next === preview) return;
+      preview = next;
+      if (view !== View.HIDDEN) drawPreview();
+    },
+
     /** 两个按钮点不点得动、esc 截不截得住（要辅助功能权限）。点不动时不画按钮，提示里也不提 esc */
     setControls(enabled) {
       controls = enabled;
@@ -318,6 +351,7 @@ export function createBarUi({ document, host, keys: initialKeys, t: initialT, on
       message.textContent = text ?? "";
       drawHint();
       drawChip();
+      drawPreview();
     },
   };
 }

@@ -260,6 +260,8 @@ export default {
       barHint: "Whether the hint line above the voice bar (press … to finish · esc to cancel) shows: on or off",
       outputScript:
         "Whether dictated Chinese comes out simplified or traditional: English, numbers, and Cantonese-only characters stay as they are",
+      livePreview:
+        "Whether the voice bar shows provisional text while you speak, updated every few seconds: only on-device recognition has this, and the finished result still comes out the usual way",
       lookup: {
         to: "What selection translation translates into: one language; the card can switch to another for one go",
         model:
@@ -340,6 +342,10 @@ export default {
     simplified: "Simplified",
     "traditional-hk": "Traditional (Hong Kong)",
     "traditional-tw": "Traditional (Taiwan)",
+  },
+  livePreviews: {
+    on: "Shown",
+    off: "Hidden",
   },
   localModels: {
     tags: {
@@ -508,6 +514,8 @@ export default {
     secureInput: "Secure input is on in another app, so some shortcuts won't work for now",
     // 只有 Windows 有：系统不把发给管理员窗口的按键交给我们
     elevatedForeground: "The window in front runs as administrator, so shortcuts won't work in it",
+    // 录音时悬浮条上的暂定文字：不是最终结果，停口后会被正式结果取代
+    previewLabel: "Hearing so far",
   },
 
   tray: {
@@ -935,6 +943,8 @@ export default {
     localModelMemoryFailed: "Memory setting not changed: {reason}",
     barHint: "Show key hints on the voice bar",
     outputScript: "Output script",
+    livePreview: "Preview words on the voice bar while speaking",
+    livePreviewFailed: "Preview setting not changed: {reason}",
     openAtLogin: "Launch at login",
     themeFailed: "Theme not changed: {reason}",
     languageFailed: "Language not changed: {reason}",

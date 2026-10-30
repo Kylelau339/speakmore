@@ -51,11 +51,21 @@ export class VoiceSocket {
    * 开始一次录音。连不上会在这里抛出。
    * 模式照原版：start_audio 写内部名（mode），要参数的紧跟一条 set_mode_config（configMode 和参数）
    * @param {string} audioId
-   * @param {{ mode?: string, configMode?: string, parameters?: object | null }} [options] 不写是语音输入
+   * @param {{ mode?: string, configMode?: string, parameters?: object | null, onPartial?: ((text: string) => void) | null }} [options]
+   *   不写是语音输入；onPartial 是录音时的暂定文字（本机识别才有），每次来一整条，取代上一条
    */
-  async begin(audioId, { mode = "voice_transcript", configMode, parameters = null } = {}) {
+  async begin(audioId, { mode = "voice_transcript", configMode, parameters = null, onPartial = null } = {}) {
     const socket = await this.#connected();
-    this.#current = { audioId, nextIndex: 1, sending: Promise.resolve(), failure: null, settle: null };
+    this.#current = {
+      audioId,
+      nextIndex: 1,
+      sending: Promise.resolve(),
+      failure: null,
+      settle: null,
+      onPartial,
+      /** 已经收到过的最新一条暂定的序号：旧、重复、乱序的都丢掉 */
+      partial: 0,
+    };
     socket.send(
       JSON.stringify({
         type: "start_audio",
@@ -162,6 +172,9 @@ export class VoiceSocket {
     // 上一次录音迟到的消息不能算到这一次头上
     if (!current || (value.audio_id && value.audio_id !== current.audioId)) return;
     switch (kind) {
+      case "audio_transcript_partial":
+        this.#onPartial(current, value);
+        break;
       case "audio_processing_completed":
         current.settle?.resolve({ text: value.refined_text, source: value.source_text ?? null });
         break;
@@ -174,5 +187,20 @@ export class VoiceSocket {
         break;
       // audio_session_started、received_audio_chunk_count、audio_session_ending 只是进度，用不到
     }
+  }
+
+  /**
+   * 录音时的暂定文字：只认这一次的录音、比上一条新的（整条取代，旧的一条都不该盖回去）。
+   * 空字符串不当一回事：那一下没听到字，条上留着上一次的比清空好
+   */
+  #onPartial(current, value) {
+    const { onPartial } = current;
+    if (typeof onPartial !== "function") return;
+    if (value.audio_id !== current.audioId) return;
+    const { sequence, text } = value;
+    if (!Number.isInteger(sequence) || sequence <= current.partial) return;
+    if (typeof text !== "string" || text.length === 0) return;
+    current.partial = sequence;
+    onPartial(text);
   }
 }

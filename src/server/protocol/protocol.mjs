@@ -21,6 +21,8 @@ export const ClientType = Object.freeze({
 export const ServerType = Object.freeze({
   STARTED: "audio_session_started",
   CHUNK_RECEIVED: "received_audio_chunk_count",
+  /** 录音时的暂定文字（本机识别才有）：同一段录音会来好几条，后一条整个取代前一条，不是接着往下拼 */
+  AUDIO_TRANSCRIPT_PARTIAL: "audio_transcript_partial",
   ENDING: "audio_session_ending",
   COMPLETED: "audio_processing_completed",
   PROCESSING_ERROR: "audio_processing_error",

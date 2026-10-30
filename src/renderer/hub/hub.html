@@ -473,6 +473,12 @@
             <select class="select" id="output-script"></select>
           </div>
           <p class="setting-note" id="output-script-note" role="status" hidden></p>
+          <!-- 录音时在悬浮条上预览暂定文字：只有本机识别能做，云端要每隔几秒再传一次录音，不做 -->
+          <div class="setting">
+            <label class="setting-title" for="live-preview" data-i18n="preferences.livePreview">Preview words on the voice bar while speaking</label>
+            <input type="checkbox" class="switch" id="live-preview" />
+          </div>
+          <p class="setting-note" id="live-preview-note" role="status" hidden></p>
           <!-- 从终端启动时登记不了开机启动，整行不显示 -->
           <div class="setting" id="open-at-login-row">
             <label class="setting-title" for="open-at-login" data-i18n="preferences.openAtLogin">Launch at login</label>

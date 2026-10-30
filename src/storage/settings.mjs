@@ -44,6 +44,8 @@ export const ACCELERATIONS = Object.freeze(["auto", "cpu"]);
 export const LOCAL_MODEL_MEMORY = Object.freeze(["resident", "1m", "5m", "10m", "30m"]);
 /** 悬浮条上方的操作提示（"再按一下 右⌥ 完成 · esc 取消"）显示不显示：熟练了的人嫌它一直挂着（GitHub issue #3） */
 export const BAR_HINTS = Object.freeze(["on", "off"]);
+/** 录音时在悬浮条上预览暂定的听写文字：只在本机识别时有用，先看一眼模型听成了什么 */
+export const LIVE_PREVIEWS = Object.freeze(["on", "off"]);
 const THINKING_LEVELS = findProvider("gemini").thinkingLevels;
 /** 语音翻译最多列几种目标语言：悬浮条上的语言选单一种一行，再多放不下，也挑不过来 */
 export const MAX_TRANSLATE_TARGETS = 6;
@@ -288,6 +290,18 @@ export const SETTINGS = {
       return id;
     },
     label: (value) => msg(`outputScripts.${value}`),
+  },
+  livePreview: {
+    // 录音时在悬浮条上显示暂定的听写文字（server 每个新录音块跑一次本机识别）。只有本机识别能预览，云端没有
+    env: "SPEAKMORE_LIVE_PREVIEW",
+    default: "on",
+    choices: LIVE_PREVIEWS,
+    parse(value) {
+      const id = value.trim().toLowerCase();
+      if (!LIVE_PREVIEWS.includes(id)) throw oneOf(LIVE_PREVIEWS);
+      return id;
+    },
+    label: (value) => msg(`livePreviews.${value}`),
   },
 };
 

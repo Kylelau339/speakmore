@@ -74,6 +74,9 @@ export const showsChip = (view) => view === View.STARTING || view === View.RECOR
 /** 胶囊点得动（换这一次的语言）、要截的样子：说着话时。等成品时只写着：换了也来不及，esc 也不该被吞 */
 export const picksChip = (view) => view === View.STARTING || view === View.RECORDING;
 
+/** 这个样子下画不画录音时的暂定文字：只在正在听时。开始（还没声音可听）、等成品、出错都不画 */
+export const showsPreview = (view) => view === View.RECORDING;
+
 /** 这个样子下，条上哪几个按钮点得动 */
 export function controlsIn(view) {
   if (view === View.STARTING) return ["cancel"];
