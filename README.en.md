@@ -586,7 +586,7 @@ flowchart LR
 | `barHint` | `on` | Hint line above the voice bar: `on` / `off` |
 | `outputScript` | `simplified` | Script of dictated Chinese: `simplified` / `traditional-hk` / `traditional-tw` |
 | `theme` | `ink` | Theme: `ink` / `cinnabar` / `indigo` |
-| `language` | `system` | Language: `system` / `en` / `zh-CN` |
+| `language` | `system` | Language: `system` / `en` / `zh-CN` / `zh-TW` |
 
 - Settings are stored in `~/.speakmore/settings.json`.
 - A hotkey value is a list of combinations. Keys use [`KeyboardEvent.code`](https://developer.mozilla.org/docs/Web/API/UI_Events/Keyboard_event_code_values) names (e.g. `AltRight`, `MetaRight`, `ControlRight`, `Fn`, `Space`, `Enter`, `KeyK`, `F13`), with two keys joined by `+`. A single combination can be written as is: `speakmore config set hotkey.dictate ControlRight+F9`; several go in a JSON array: `'["AltRight","ControlRight"]'`.

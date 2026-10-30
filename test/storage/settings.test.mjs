@@ -254,6 +254,7 @@ test("带说明的设置项：热键给出键帽，主题给出主题的名字�
   assert.equal(zh.text(SETTINGS.theme.label("cinnabar")), "朱砂");
   assert.equal(en.text(SETTINGS.theme.label("cinnabar")), "Cinnabar");
   assert.equal(en.text(SETTINGS.language.label("zh-CN")), "简体中文");
+  assert.equal(zh.text(SETTINGS.language.label("zh-TW")), "繁體中文");
   assert.equal(zh.text(SETTINGS.language.label("system")), "跟随系统");
 });
 
@@ -324,8 +325,8 @@ test("界面语言：默认跟随系统；写哪种都认（大小写、_ 不论
     value: "zh-CN",
     source: "env",
   });
-  assert.throws(() => saveSetting(file, "language", "ja"), said(/system \/ en \/ zh-CN/));
-  assert.deepEqual(SETTINGS.language.choices, ["system", "en", "zh-CN"]);
+  assert.throws(() => saveSetting(file, "language", "ja"), said(/system \/ en \/ zh-CN \/ zh-TW/));
+  assert.deepEqual(SETTINGS.language.choices, ["system", "en", "zh-CN", "zh-TW"]);
 });
 
 test("写错时的说法也跟着语言换", () => {

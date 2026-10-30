@@ -586,7 +586,7 @@ flowchart LR
 | `barHint` | `on` | 悬浮条操作提示：`on` / `off` |
 | `outputScript` | `simplified` | 听写成品的中文字形：`simplified` / `traditional-hk` / `traditional-tw` |
 | `theme` | `ink` | 主题：`ink` / `cinnabar` / `indigo` |
-| `language` | `system` | 语言：`system` / `en` / `zh-CN` |
+| `language` | `system` | 语言：`system` / `en` / `zh-CN` / `zh-TW` |
 
 - 设置保存于 `~/.speakmore/settings.json`。
 - 快捷键的值为组合列表，键名采用 [`KeyboardEvent.code`](https://developer.mozilla.org/docs/Web/API/UI_Events/Keyboard_event_code_values)（如 `AltRight`、`MetaRight`、`ControlRight`、`Fn`、`Space`、`Enter`、`KeyK`、`F13`），两键以 `+` 相连。单个组合可直接写：`speakmore config set hotkey.dictate ControlRight+F9`；多个组合写作 JSON 数组：`'["AltRight","ControlRight"]'`。

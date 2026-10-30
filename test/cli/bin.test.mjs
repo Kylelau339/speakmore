@@ -53,8 +53,11 @@ test("说什么语言：设置里写了就用它；跟随系统时看终端的 L
   assert.equal(helpIn({ LANG: "zh_CN.UTF-8" }), "SpeakMore：按一下热键说话，整理好的文字贴进当前输入框。");
   assert.match(helpIn({ LANG: "en_US.UTF-8" }), /^SpeakMore: press a hotkey/);
   assert.match(helpIn({ LANG: "zh_CN.UTF-8", LC_ALL: "en_GB.UTF-8" }), /^SpeakMore: press a hotkey/);
-  // 繁体、日文、C：我们没有，用英文
-  for (const LANG of ["zh_TW.UTF-8", "ja_JP.UTF-8", "C"]) assert.match(helpIn({ LANG }), /^SpeakMore: press/, LANG);
+  // 繁体（TW/HK）用繁体；日文、C：我们没有，用英文
+  for (const LANG of ["zh_TW.UTF-8", "zh_HK.UTF-8"]) {
+    assert.equal(helpIn({ LANG }), "SpeakMore：按一下熱鍵說話，整理好的文字貼進當前輸入框。", LANG);
+  }
+  for (const LANG of ["ja_JP.UTF-8", "C"]) assert.match(helpIn({ LANG }), /^SpeakMore: press/, LANG);
   // 什么都没设：macOS 上按英文；Windows 的终端一般不设这几个，按系统的显示语言（i18n 的测试查）
   if (process.platform !== "win32") assert.match(helpIn({}), /^SpeakMore: press/);
 
