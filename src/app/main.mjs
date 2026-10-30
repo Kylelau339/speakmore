@@ -328,6 +328,9 @@ if (PRELUDE === null && !isOnlyInstance) {
 
 const sourceDir = join(app.getAppPath(), "src");
 const webPreferences = { preload: join(sourceDir, "preload", "preload.cjs"), sandbox: true, contextIsolation: true };
+// 悬浮条和划词卡片平时藏着、按热键才露出来。藏着的页面会被 Chromium 当后台页降频，按键那条消息压在队列里，
+// 要几秒后才画出来，连按几下会一起涌出来（PR #21，Windows 上实测最长 13 秒）
+const popupPreferences = { ...webPreferences, backgroundThrottling: false };
 // 窗口里只放我们自己的页面。几个窗口共用一份预加载脚本：拖进窗口的文件、页面里的链接要是把窗口带走了，
 // 那个页面也能调到存 key、读历史、读剪贴板这些接口。开新窗口同理
 app.on("web-contents-created", (_event, contents) => {
@@ -660,9 +663,7 @@ async function main() {
       skipTaskbar: true,
       // 不能抢焦点：焦点一旦离开用户正在用的输入框，文字就贴不进去了
       focusable: false,
-      // 这个窗口平时是隐藏的，按热键才露出来。别让 Chromium 把隐藏的页面按后台页降频：
-      // 降了的话按键那一条消息会压在队列里，条要几秒后才画出来（10-30 实测最长 13 秒，连按几下会一起涌出来）
-      webPreferences: { ...webPreferences, backgroundThrottling: false },
+      webPreferences: popupPreferences,
     });
     // 整个窗口都点不到，鼠标事件原样落到它下面的应用上。条上的两个按钮不靠这个窗口收点击：
     // 点击一旦落在我们的窗口上，系统就会把我们切到最前面（面板类型的窗口也一样，实测过），输入框照样丢焦点。
@@ -1032,7 +1033,7 @@ async function main() {
     screen,
     ipcMain,
     sourceDir,
-    webPreferences,
+    webPreferences: popupPreferences,
     windows: WINDOWS,
     capture: (regions) => {
       if (regions === null) {
