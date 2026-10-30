@@ -86,16 +86,11 @@ function handleConnection(socket, { refiner, log, maxAudioBytes, vocabularyFor, 
   /** 正在进行的整理，连接断开时用来取消 */
   const refining = new Set();
   /**
-   * 录音时先听一眼：最多一条在跑，跑的时候来了新块只留最新那一份快照。
-   * 预览用的是同一个本机模型，只能一条一条来（转写进程自己也会排队，见 asr/worker.mjs）
+   * 录音时先听一眼：一次只跑一条，跑的时候来了新块只留最新那一份快照。
+   * 预览和正式整理用的是同一个本机模型，不能同时跑：停口时正式整理排在 previewChain 后面
    */
   let previewPending = null;
   let previewChain = Promise.resolve();
-  /** 同一次录音只记第一条预览失败，免得每三秒刷一条 */
-  let previewFailed = false;
-  let previewSequence = 0;
-  /** 预览用的词典：一次录音只读一次（每块都读文件没必要，坏了还会刷警告） */
-  let previewVocabulary = { audioId: null, terms: [] };
 
   const send = (kind, value) => {
     if (socket.readyState !== WebSocket.OPEN) {
@@ -129,8 +124,6 @@ function handleConnection(socket, { refiner, log, maxAudioBytes, vocabularyFor, 
         session = new RecordingSession(message.audioId, { maxTotalBytes: maxAudioBytes, definition });
         // 新的一次录音：上一次的预览已经过时，别让它在跑完之后冒出来
         previewPending = null;
-        previewFailed = false;
-        previewVocabulary = { audioId: null, terms: [] };
         // 不要参数的任务开口就定下来；要参数的（翻译要目标语言）等紧跟着的 set_mode_config
         if (definition.parameters.length === 0) settle(session, {});
         send(ServerType.STARTED, { audio_id: message.audioId, start_time: Date.now() });
@@ -186,14 +179,13 @@ function handleConnection(socket, { refiner, log, maxAudioBytes, vocabularyFor, 
     if (typeof refiner.preview !== "function") return;
     if (current.definition.id !== "dictate") return;
     if (current.chunkCount === 0) return;
-    if (previewVocabulary.audioId !== current.audioId) {
-      previewVocabulary = { audioId: current.audioId, terms: vocabularyFor(current.audioId) };
-    }
+    // 词典一次录音读一次：每块都读没必要，文件坏了还会每块记一条警告
+    current.previewVocabulary ??= vocabularyFor(current.audioId);
     previewPending = {
       current,
       audio: current.merge(),
       mimeType: current.mimeType,
-      vocabulary: previewVocabulary.terms,
+      vocabulary: current.previewVocabulary,
       // 这一块到的时候的任务：要繁体的话转字形这一步在任务的收尾里，预览也得按同一份来
       task: current.task,
     };
@@ -214,16 +206,13 @@ function handleConnection(socket, { refiner, log, maxAudioBytes, vocabularyFor, 
       });
       // 跑这段时间里录音结束了、换了新的一次、或者切成了语音翻译：这份文字已经过时，不发
       if (job.current !== session || session.definition.id !== "dictate") return;
-      if (typeof text !== "string" || text.length === 0) return;
-      previewSequence += 1;
-      send(ServerType.AUDIO_TRANSCRIPT_PARTIAL, {
-        audio_id: session.audioId,
-        sequence: previewSequence,
-        text,
-      });
+      if (typeof text === "string" && text.length > 0) {
+        send(ServerType.AUDIO_TRANSCRIPT_PARTIAL, { audio_id: session.audioId, text });
+      }
     } catch (error) {
-      if (!previewFailed) {
-        previewFailed = true;
+      // 同一次录音只记第一条，免得每三秒刷一条
+      if (!job.current.previewFailed) {
+        job.current.previewFailed = true;
         log.warn("preview_failed", { audio_id: job.current.audioId, error: String(error?.message ?? error) });
       }
     }

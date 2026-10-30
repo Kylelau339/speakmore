@@ -138,8 +138,6 @@ let ROUTE;
 let acceleration;
 /** 本机模型常驻，还是开口时装载、空闲多久后释放（设置里的 localModelMemory）。换了当场生效（service.setLocalModelMemory） */
 let localModelMemory;
-/** 录音时要不要在悬浮条上显示暂定文字（设置里的 livePreview，on / off）。换了当场生效（service.setLivePreview） */
-let livePreview;
 /**
  * 启动时就出错了（家目录找不到、定位文件坏了、设置读不出）：照实说出来再退出，不留一个按了热键没反应的进程。
  * 写在标准错误上的，speakmore 命令起的会在终端里转述（它接着日志）；从程序坞、开始菜单、开机启动起的没有终端，
@@ -174,7 +172,6 @@ if (PRELUDE === null) {
     ROUTE = routeOf(SETTINGS);
     acceleration = SETTINGS.acceleration.value;
     localModelMemory = SETTINGS.localModelMemory.value;
-    livePreview = SETTINGS.livePreview.value;
     hotkeys = resolveHotkeys(SETTINGS, process.platform);
     hotkeySettings = hotkeySettingValues(SETTINGS);
     PROVIDER = keyVendorOf(ROUTE) ?? null;
@@ -490,8 +487,8 @@ async function main() {
         onLocalModel: () => localModelChanged(),
         acceleration,
         localModelMemory,
-        // 预览只有本机识别能做；关着时服务端连排都不排
-        livePreview: livePreview === "on",
+        // 录音时的预览只有本机识别能做；关着时服务端连排都不排。换了调 service.setLivePreview
+        livePreview: SETTINGS.livePreview.value === "on",
         vocabulary: vocabulary.terms,
       });
   const serverUrl = EXTERNAL_SERVER_URL ?? service.url;

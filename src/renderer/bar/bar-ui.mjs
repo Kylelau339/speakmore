@@ -38,9 +38,7 @@ export function createBarUi({ document, host, keys: initialKeys, t: initialT, on
   const { body } = document;
   const hint = document.getElementById("hint");
   const chipHost = document.getElementById("chip");
-  const previewHost = document.getElementById("preview");
-  const previewLabel = document.getElementById("preview-label");
-  const previewText = document.getElementById("preview-text");
+  const previewText = document.getElementById("preview");
   const message = document.getElementById("message");
   const buttons = { cancel: document.getElementById("cancel"), confirm: document.getElementById("confirm") };
   const window = document.defaultView;
@@ -166,16 +164,11 @@ export function createBarUi({ document, host, keys: initialKeys, t: initialT, on
     chipHost.replaceChildren(menu, button);
   }
 
-  /** 录音时的暂定文字：只在正在听时画，写完就换掉；文字只写 textContent，不拼 HTML */
+  /** 录音时的暂定文字：只在正在听时画；文字只写 textContent，不拼 HTML */
   function drawPreview() {
     const visible = preview !== null && showsPreview(view);
-    previewHost.hidden = !visible;
-    if (!visible) {
-      previewText.textContent = "";
-      return;
-    }
-    previewLabel.textContent = t("bar.previewLabel");
-    previewText.textContent = preview;
+    previewText.hidden = !visible;
+    previewText.textContent = visible ? preview : "";
   }
 
   function setChipOpen(open) {

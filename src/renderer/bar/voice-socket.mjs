@@ -56,16 +56,7 @@ export class VoiceSocket {
    */
   async begin(audioId, { mode = "voice_transcript", configMode, parameters = null, onPartial = null } = {}) {
     const socket = await this.#connected();
-    this.#current = {
-      audioId,
-      nextIndex: 1,
-      sending: Promise.resolve(),
-      failure: null,
-      settle: null,
-      onPartial,
-      /** 已经收到过的最新一条暂定的序号：旧、重复、乱序的都丢掉 */
-      partial: 0,
-    };
+    this.#current = { audioId, nextIndex: 1, sending: Promise.resolve(), failure: null, settle: null, onPartial };
     socket.send(
       JSON.stringify({
         type: "start_audio",
@@ -172,8 +163,9 @@ export class VoiceSocket {
     // 上一次录音迟到的消息不能算到这一次头上
     if (!current || (value.audio_id && value.audio_id !== current.audioId)) return;
     switch (kind) {
+      // 录音时的暂定文字：后一条整个取代前一条；空的不当一回事，条上留着上一次的比清空好
       case "audio_transcript_partial":
-        this.#onPartial(current, value);
+        if (typeof value.text === "string" && value.text.length > 0) current.onPartial?.(value.text);
         break;
       case "audio_processing_completed":
         current.settle?.resolve({ text: value.refined_text, source: value.source_text ?? null });
@@ -187,20 +179,5 @@ export class VoiceSocket {
         break;
       // audio_session_started、received_audio_chunk_count、audio_session_ending 只是进度，用不到
     }
-  }
-
-  /**
-   * 录音时的暂定文字：只认这一次的录音、比上一条新的（整条取代，旧的一条都不该盖回去）。
-   * 空字符串不当一回事：那一下没听到字，条上留着上一次的比清空好
-   */
-  #onPartial(current, value) {
-    const { onPartial } = current;
-    if (typeof onPartial !== "function") return;
-    if (value.audio_id !== current.audioId) return;
-    const { sequence, text } = value;
-    if (!Number.isInteger(sequence) || sequence <= current.partial) return;
-    if (typeof text !== "string" || text.length === 0) return;
-    current.partial = sequence;
-    onPartial(text);
   }
 }

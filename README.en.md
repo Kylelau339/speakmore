@@ -584,6 +584,7 @@ flowchart LR
 | `acceleration` | `auto` | Acceleration: `auto` / `cpu` |
 | `localModelMemory` | `resident` | On-device transcription model memory: `resident` / `1m` / `5m` / `10m` / `30m` |
 | `barHint` | `on` | Hint line above the voice bar: `on` / `off` |
+| `livePreview` | `on` | Preview words on the voice bar while speaking (on-device recognition only, last few seconds): `on` / `off` |
 | `outputScript` | `simplified` | Script of dictated Chinese: `simplified` / `traditional-hk` / `traditional-tw` |
 | `theme` | `ink` | Theme: `ink` / `cinnabar` / `indigo` |
 | `language` | `system` | Language: `system` / `en` / `zh-CN` / `zh-TW` |

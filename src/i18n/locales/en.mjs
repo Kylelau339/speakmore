@@ -334,7 +334,8 @@ export default {
     "10m": "Release after 10 min idle",
     "30m": "Release after 30 min idle",
   },
-  barHints: {
+  // 显示不显示的开关（悬浮条上的操作提示、录音时的预览）
+  shown: {
     on: "Shown",
     off: "Hidden",
   },
@@ -342,10 +343,6 @@ export default {
     simplified: "Simplified",
     "traditional-hk": "Traditional (Hong Kong)",
     "traditional-tw": "Traditional (Taiwan)",
-  },
-  livePreviews: {
-    on: "Shown",
-    off: "Hidden",
   },
   localModels: {
     tags: {
@@ -514,8 +511,6 @@ export default {
     secureInput: "Secure input is on in another app, so some shortcuts won't work for now",
     // 只有 Windows 有：系统不把发给管理员窗口的按键交给我们
     elevatedForeground: "The window in front runs as administrator, so shortcuts won't work in it",
-    // 录音时悬浮条上的暂定文字：不是最终结果，停口后会被正式结果取代
-    previewLabel: "Hearing so far",
   },
 
   tray: {

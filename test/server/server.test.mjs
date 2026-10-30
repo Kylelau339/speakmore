@@ -481,7 +481,7 @@ async function until(client, kind, limit = 10) {
   throw new Error(`没等到 ${kind}`);
 }
 
-test("本机识别：每收一块听一眼，回的整条文字带序号；正式整理用整段录音", async () => {
+test("本机识别：每收一块听一眼，回的是整条文字；正式整理用整段录音", async () => {
   const previews = [];
   const refined = [];
   const port = await start({
@@ -501,7 +501,7 @@ test("本机识别：每收一块听一眼，回的整条文字带序号；正�
   const first = ogg("one");
   await sendChunk(client, "p1", 1, first);
   const firstPartial = await until(client, "audio_transcript_partial");
-  assert.deepEqual(firstPartial.V, { audio_id: "p1", sequence: 1, text: "听到1" });
+  assert.deepEqual(firstPartial.V, { audio_id: "p1", text: "听到1" });
   // 传进去的是到现在为止累积的录音，不是刚到的这一块
   assert.deepEqual(previews[0].audio, first);
   assert.equal(previews[0].audioId, "p1");
@@ -509,7 +509,7 @@ test("本机识别：每收一块听一眼，回的整条文字带序号；正�
   const second = ogg("two");
   await sendChunk(client, "p1", 2, second);
   const secondPartial = await until(client, "audio_transcript_partial");
-  assert.deepEqual(secondPartial.V, { audio_id: "p1", sequence: 2, text: "听到2" });
+  assert.deepEqual(secondPartial.V, { audio_id: "p1", text: "听到2" });
   assert.deepEqual(previews[1].audio, Buffer.concat([first, second]));
 
   client.sendJson({ type: "end_audio", audio_id: "p1", total_duration: 5 });

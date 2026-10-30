@@ -190,12 +190,14 @@ body[data-shown="false"] .shell {
 
 /* ---------- 录音时的暂定文字 ---------- */
 
-/* 条上方的一小片字：服务端每隔几块来一条，后一条整个取代前一条。两行就够，高度定住，换字时条不跳；
-   它只是"现在听到哪里"，停口后会被正式结果取代，所以颜色比提示淡一点 */
+/* 条上方的一小片字：服务端每来一块给一条，后一条整个取代前一条。只转写最近几秒，两行放得下；
+   高度定住，换字时条不跳。放不下的网址、长串英文也要能断开 */
 .preview {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.45em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
   max-width: 320px;
   height: calc(2 * 1.35em + 10px);
   margin: 0;
@@ -210,25 +212,6 @@ body[data-shown="false"] .shell {
 
 .preview[hidden] {
   display: none;
-}
-
-.preview-label {
-  flex: none;
-  color: var(--bar-muted);
-  font-size: var(--text-micro);
-  line-height: 1.35;
-  /* 和第一行正文对齐 */
-  padding-top: 0.1em;
-}
-
-/* 最多两行，多出来的截断；不放宽的网址、长串英文也要能断开 */
-.preview-text {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  margin: 0;
-  overflow: hidden;
-  overflow-wrap: anywhere;
 }
 
 /* ---------- 条 ---------- */

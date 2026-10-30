@@ -71,8 +71,6 @@ function dispatch(event) {
   state = result.state;
   // 状态没动（比如空闲时松开热键）就不重画
   if (state !== previous) ui.show(viewOf(state, previous.phase), t.text(state.message));
-  // 不在听了（停口、取消、出错）：暂定文字立刻收掉，别让它留到整理中或下一次开口
-  if (previous.phase === Phase.RECORDING && state.phase !== Phase.RECORDING) ui.setPreview(null);
   for (const action of result.actions) ACTIONS[action]();
 }
 

@@ -189,8 +189,9 @@ test("录音时的暂定文字：每块回一条，忙碌时只留最新的快�
   assert.equal(calls, 2);
 });
 
-test("暂定文字认录音号和新序号：别的录音、重复的、倒回去的、空的、序号不是整数都不要", async () => {
+test("暂定文字只认这一次录音的，空的不要；收起来以后再来的也不要", async (t) => {
   const wss = new WebSocketServer({ port: 0 });
+  t.after(() => new Promise((resolve) => wss.close(resolve)));
   await once(wss, "listening");
   let peer = null;
   wss.on("connection", (connected) => {
@@ -198,28 +199,23 @@ test("暂定文字认录音号和新序号：别的录音、重复的、倒回�
   });
   const socket = new VoiceSocket(`ws://127.0.0.1:${wss.address().port}${WS_PATH}`);
   voice = socket;
+  t.after(() => socket.close());
   const seen = [];
   await socket.begin("p1", { onPartial: (text) => seen.push(text) });
   while (peer === null) await new Promise((resolve) => setTimeout(resolve, 5));
 
   const say = (value) =>
     peer.send(JSON.stringify({ K: "audio_transcript_partial", V: value, T: "json", M: false, S: "done" }));
-  say({ audio_id: "别的", sequence: 9, text: "不是这一次的" });
-  say({ audio_id: "p1", sequence: 2, text: "第二次" });
-  say({ audio_id: "p1", sequence: 2, text: "重复的第二次" });
-  say({ audio_id: "p1", sequence: 1, text: "倒回去的第一次" });
-  say({ audio_id: "p1", sequence: 3, text: "" });
-  say({ audio_id: "p1", sequence: "4", text: "序号不是整数" });
-  say({ audio_id: "p1", sequence: 4, text: "第四次" });
+  say({ audio_id: "别的", text: "不是这一次的" });
+  say({ audio_id: "p1", text: "第一次" });
+  say({ audio_id: "p1", text: "" });
+  say({ audio_id: "p1", text: "第二次" });
   await new Promise((resolve) => setTimeout(resolve, 60));
-  assert.deepEqual(seen, ["第二次", "第四次"]);
+  assert.deepEqual(seen, ["第一次", "第二次"]);
 
   // 收起来之后（取消了、换下一次了）再来的一概不算
   socket.abandon();
-  say({ audio_id: "p1", sequence: 5, text: "收起来以后的" });
+  say({ audio_id: "p1", text: "收起来以后的" });
   await new Promise((resolve) => setTimeout(resolve, 60));
-  assert.deepEqual(seen, ["第二次", "第四次"]);
-
-  socket.close();
-  await new Promise((resolve) => wss.close(resolve));
+  assert.deepEqual(seen, ["第一次", "第二次"]);
 });

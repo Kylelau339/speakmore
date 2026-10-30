@@ -208,6 +208,15 @@ test("预览：只解录音、跑转写，不润色、不记账；整段取代�
   assert.deepEqual(log.events, []);
 });
 
+test("预览只转写最近 8 秒：说得再久每次的开销也不涨，条上放得下的也就是最近这几句；前面截掉了就在开头加省略号", async () => {
+  const { seen, transcriber, polisher } = parts({ transcript: "最近这几句" });
+  const long = Float32Array.from({ length: 20 * 16_000 }, (_, i) => i);
+  const refiner = createLocalRefiner({ transcriber, polisher, log: recordingLog(), decode: async () => long });
+  assert.deepEqual(await refiner.preview(Buffer.from("webm"), { mimeType: "audio/webm" }), { text: "…最近这几句" });
+  assert.equal(seen.transcribed[0].length, 8 * 16_000);
+  assert.equal(seen.transcribed[0][0], 12 * 16_000);
+});
+
 test("预览出错照实抛出来（上层丢掉这一次，只记一条警告）；转写照样能继续", async () => {
   const { decode, transcriber } = parts({ transcribeError: new ModelError({ kind: "asr", detail: "坏了" }) });
   const refiner = createLocalRefiner({ transcriber, polisher: parts().polisher, log: recordingLog(), decode });

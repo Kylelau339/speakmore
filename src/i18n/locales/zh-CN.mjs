@@ -317,7 +317,8 @@ export default {
     "10m": "空闲 10 分钟后释放",
     "30m": "空闲 30 分钟后释放",
   },
-  barHints: {
+  // 显示不显示的开关（悬浮条上的操作提示、录音时的预览）
+  shown: {
     on: "显示",
     off: "不显示",
   },
@@ -325,10 +326,6 @@ export default {
     simplified: "简体",
     "traditional-hk": "繁体（香港）",
     "traditional-tw": "繁体（台湾）",
-  },
-  livePreviews: {
-    on: "显示",
-    off: "不显示",
   },
   localModels: {
     tags: {
@@ -495,8 +492,6 @@ export default {
     secureInput: "有应用开着安全输入，部分组合键暂时用不了",
     // 只有 Windows 有：系统不把发给管理员窗口的按键交给我们
     elevatedForeground: "前台是以管理员身份运行的窗口，在它上面快捷键用不了",
-    // 录音时悬浮条上的暂定文字：不是最终结果，停口后会被正式结果取代
-    previewLabel: "听到这里",
   },
 
   tray: {

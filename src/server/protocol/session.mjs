@@ -17,6 +17,10 @@ export class RecordingSession {
   /** @type {object | null} */
   task = null;
 
+  /** 录音时的预览（server.mjs）：用的词典一次录音读一次；失败了只记第一条警告 */
+  previewVocabulary = null;
+  previewFailed = false;
+
   constructor(audioId, { maxTotalBytes, definition }) {
     this.audioId = audioId;
     this.definition = definition;
