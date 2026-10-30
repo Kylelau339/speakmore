@@ -52,7 +52,8 @@ export function createCardWindow({
     skipTaskbar: true,
     // 不抢焦点：用户正在用的那个应用留着焦点和选区，看完接着用
     focusable: false,
-    webPreferences,
+    // 同悬浮条：平时隐藏着，按热键才露出来。不关掉后台降频的话，卡片要几秒后才画出来，像是没反应
+    webPreferences: { ...webPreferences, backgroundThrottling: false },
   });
   // 点击由小帮手截；鼠标移动照样转给页面（悬停的样子、译文太长时滚动要它）
   window.setIgnoreMouseEvents(true, { forward: true });
