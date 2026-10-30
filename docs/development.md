@@ -60,7 +60,7 @@ node scripts/dev/replay.mjs 块1.ogg 块2.ogg                         # 把现�
 3. 传到国内源（魔搭 ModelScope 上配置表 `MODELSCOPE_OWNER` 名下的仓库，一个模型一个，仓库名就是模型 id）：`scripts/release/with-modelscope-key.sh npm run sync-models -- --from <本机模型仓> --download`。它逐个核对 sha256，带上 README.md（模型卡）、LICENSE 和 NOTICE 传上去，从魔搭上逐个核对大小和 sha256、照下载地址真取一次，最后报出每个模型该钉的提交，填进配置表那一项的 `mirror.revision`（地址钉在提交上，内容永远不变）。`npm run sync-models -- --check` 不用令牌，只核对配置表钉的提交都下得到、都对。
    - 传文件用魔搭的 Python SDK：`scripts/release/modelscope-sdk.sh` 第一次跑时用 uv 装进 `.tools/modelscope/venv`，版本钉在 `scripts/release/modelscope-requirements.txt`；登录态和缓存也放在那里，不写 `~/.modelscope`。令牌在魔搭的账号设置 › 访问令牌里拿，放进按需加载器，凭据名写进 `.machine.env` 的 `MODELSCOPE_CREDENTIAL`。
 
-加一种界面语言：照着 `src/i18n/locales/en.mjs` 写一个文件，在 `src/i18n/index.mjs` 的 `LOCALES` 里登记一行（并列几样时不想用 `Intl` 的写法，比如中文全用顿号，登记时给 `separator`）。缺了哪句、参数对不上、单复数写法这种语言没有，`test/i18n/` 会指出来；设置、菜单栏、窗口、命令行都从这份清单里取，不用再改别处。只管界面：提示词和整理出来的文字不跟着变。
+加一种界面语言：照着 `src/i18n/locales/en.mjs` 写一个文件，在 `src/i18n/index.mjs` 的 `LOCALES` 里登记一行（并列几样时不想用 `Intl` 的写法，比如中文全用顿号，登记时给 `separator`）。缺了哪句、参数对不上、单复数写法这种语言没有，`test/i18n/` 会指出来；设置、菜单栏、窗口、命令行都从这份清单里取，不用再改别处。只管界面：提示词和整理出来的文字不跟着变。繁体（`zh-TW`）不手写，由 `scripts/dev/make-zh-tw.mjs` 从简体转出来（opencc 的台湾用语，再修几处它转错的）：改了简体文案就运行 `npm run i18n:zh-tw`，忘了的话 `test/i18n/` 会指出来。
 
 加一个能按快捷键做的动作：在 `src/hotkeys/actions.mjs` 加一行（两个系统都要有默认组合），文案加 `actions.<动作>.name`，中英各一份，再写它自己的处理代码。设置项 `hotkey.<动作>`、环境变量 `SPEAKMORE_HOTKEY_<动作>`、命令行、设置页的那一行、状态、下发给小帮手的绑定表都按这张表生成，不用另改（首次引导只演示、检查三个主功能，列在 `src/renderer/onboarding/flow.mjs`，新动作要进引导再加到那里）；漏了哪一处，`test/hotkeys/` 里按目录逐个动作查的测试会红。默认组合和已有的撞了的话，用户自己绑的优先，新动作这个组合不装、提示一句。
 

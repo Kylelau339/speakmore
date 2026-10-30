@@ -1527,7 +1527,7 @@ test("config set language：存进设置；在运行的话让它当场换，不�
   assert.match(idle.output.out, /下次启动生效/);
 
   assert.equal(await idle.speakmore("config", "set", "language", "fr"), 2);
-  assert.match(idle.output.err, /system \/ en \/ zh-CN/);
+  assert.match(idle.output.err, /system \/ en \/ zh-CN \/ zh-TW/);
 });
 
 test("config set language：环境变量盖着时照实说它用的还是哪种；旧版本的后台说要重启", async () => {
